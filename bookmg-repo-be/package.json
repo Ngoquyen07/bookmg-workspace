@@ -11,7 +11,10 @@
     "start": "node server.js",
     "test": "node --test",
     "openlibrary:search": "node scripts/search-open-library.js",
-    "db:check": "node scripts/check-db.js"
+    "db:check": "node scripts/check-db.js",
+    "db:migrate": "sequelize-cli db:migrate --config config/migrations.js --migrations-path migrations",
+    "db:migrate:status": "sequelize-cli db:migrate:status --config config/migrations.js --migrations-path migrations",
+    "db:test": "node scripts/check-models.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

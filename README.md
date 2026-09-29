@@ -78,10 +78,50 @@ Khi tạo model, import kết nối này và khai báo các cột bằng `DataTy
 `Model.destroy()` để thao tác dữ liệu qua ORM.
 Hướng dẫn: https://sequelize.org/docs/v6/core-concepts/model-basics/
 
-Chưa tạo bảng/model nghiệp vụ; server hiện tại vẫn chỉ có API health.
+Đã có model và migration cho `books` và `shelf_entries`; server hiện tại vẫn chỉ có API health.
 Lệnh `db:check` chỉ kiểm tra kết nối, không tạo hay sửa bảng.
 Git quản lý tại workspace;
 hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets.
+
+## Book and shelf schema
+
+`models/book.js` stores shared book metadata: Open Library work ID (`OL...W`),
+title, authors, cover ID, first publication year, description, subjects, total
+pages and optional edition ID (`OL...M`). Authors and subjects are JSON arrays.
+Unknown page counts are `null`, never zero. Both models include timestamps.
+
+`models/shelfEntry.js` stores shelf membership: ID, book ID, reading status,
+current page, optional integer rating (1–5), notes (up to 1,000 characters),
+reading start date and completion date. Status values are `want_to_read`,
+`reading` and `finished`.
+
+Import models through `models/index.js` to register associations. A book has
+zero or one shelf entry in the current single-user application. Each shelf entry
+belongs to one book; `bookId` is a unique foreign key. Removing a shelf entry
+keeps its book metadata. MySQL rejects deletion of a book still on the shelf.
+There is no user model or authentication in this scope.
+
+Run these commands from `bookmg-repo-be`:
+
+```powershell
+npm run db:migrate
+npm run db:migrate:status
+npm test
+npm run db:test
+```
+
+`db:migrate` applies versioned schema changes to `DB_NAME` configured in `.env`.
+Starting the server does not run migrations or synchronize tables automatically.
+MySQL 8.0.16 or newer is required to enforce the CHECK constraints.
+`npm test` covers model validation without connecting to MySQL. `db:test` checks
+migrations, persistence, constraints and rollback in a randomly named temporary
+database, then deletes that database. Its account needs CREATE/DROP DATABASE
+privileges; it does not change the application database.
+
+Progress limits against a book's page count, automatic completion, date
+transitions and atomic book/shelf creation belong to the upcoming service layer.
+Search and detail requests will not create database records; adding to the shelf
+will persist them.
 
 ## Backend entrypoints and environment
 
