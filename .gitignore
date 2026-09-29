@@ -7,3 +7,4 @@ dist/
 .idea/
 .serena/
 .playwright-mcp/
+/bookmg-repo-be/.tmp/
