@@ -17,7 +17,7 @@ npm run dev
 ```
 
 Backend chạy ở http://127.0.0.1:3000. Kiểm tra bằng
-http://127.0.0.1:3000/api/health, trả về `{"status":"ok"}`.
+http://127.0.0.1:3000/api/health, trả về `{"data":{"status":"ok"}}`.
 Host và cổng được lấy từ `BASE_URL` trong `bookmg-repo-be/.env`.
 
 Frontend:
@@ -95,6 +95,29 @@ Run `npm run dev` for watch mode, `npm start` for normal startup,
 `npm run db:check` to verify MySQL, and `npm test` for backend checks.
 The frontend proxy check starts `app.js` independently of MySQL; it verifies HTTP
 routing, while `db:check` verifies the real configured database connection.
+
+## Backend logs
+
+Backend logs are written asynchronously to `bookmg-repo-be/logs/YYYY-MM-DD.log`
+and printed to the terminal. Each line is a JSON record with a UTC timestamp,
+level, message and context. Logs include startup/shutdown, completed HTTP requests
+and HTTP errors. Request bodies, headers and query strings are not logged;
+sensitive context keys are redacted. The logs directory is ignored by Git.
+Daily files are retained until removed; automatic retention is not configured.
+
+## API response contract
+
+JSON success responses use `{ "data": ... }`, with optional `meta` for pagination.
+Errors use `{ "error": { "code": "...", "message": "..." } }` and the appropriate
+HTTP status. The frontend should branch on `error.code`, not message text.
+Binary cover responses will use their image content type rather than this JSON envelope.
+
+`constants/responseConstants.js` defines status codes and public errors;
+`constants/logConstants.js` defines log levels and operational messages.
+Controllers use `utils/apiResponse.js`. The final `middleware/errorHandler.js`
+maps parser errors and hides unexpected internal errors from clients.
+Book/shelf/Open Library errors are predefined for upcoming endpoints; those
+business endpoints have not been implemented yet.
 
 ## GitHub workflow
 

@@ -5,10 +5,12 @@ import request from 'supertest'
 import app from '../app.js'
 
 test('health and HTTP errors use JSON responses', async () => {
-  await request(app).get('/api/health').expect(200, { status: 'ok' })
-  await request(app).get('/missing').expect(404, { error: { message: 'Route not found' } })
+  await request(app).get('/api/health').expect(200, { data: { status: 'ok' } })
+  await request(app).get('/missing').expect(404, { error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found' } })
   await request(app).post('/missing').set('Content-Type', 'application/json')
-    .send('{').expect(400, { error: { message: 'Invalid JSON body' } })
+    .send('{').expect(400, { error: { code: 'INVALID_JSON', message: 'Invalid JSON body' } })
+  await request(app).post('/missing').send({ value: 'x'.repeat(110_000) })
+    .expect(413, { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } })
 })
 
 test('server exits without listening when MySQL is unavailable', () => {
@@ -25,7 +27,7 @@ test('server exits without listening when MySQL is unavailable', () => {
   })
   assert.ifError(result.error)
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /Backend startup failed:/)
+  assert.match(result.stderr, /Backend startup failed/)
   assert.doesNotMatch(result.stdout, /Backend ready/)
   assert.doesNotMatch(result.stderr, /startup-test-secret/)
 })
