@@ -10,7 +10,12 @@ test('FE proxies /api to BE using environment URLs', { timeout: 15000 }, async (
   process.env.BASE_URL = 'http://127.0.0.1:15173'
   process.env.API_BASE_URL = 'http://127.0.0.1:13000'
 
-  const backend = spawn(process.execPath, ['src/server.js'], {
+  // Test HTTP routing independently of MySQL; server.js checks DB readiness separately.
+  const backend = spawn(process.execPath, ['--input-type=module', '-e', `
+    import app from './app.js'
+    const url = new URL(process.env.BASE_URL)
+    app.listen(Number(url.port), url.hostname, () => console.log('HTTP fixture ready'))
+  `], {
     cwd: new URL('../../bookmg-repo-be/', import.meta.url),
     env: { ...process.env, BASE_URL: process.env.API_BASE_URL },
     stdio: ['ignore', 'pipe', 'inherit'],

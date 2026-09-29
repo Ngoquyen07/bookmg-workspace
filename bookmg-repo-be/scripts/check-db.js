@@ -1,4 +1,4 @@
-import { sequelize } from '../src/database.js'
+import { sequelize } from '../config/database.js'
 
 try {
   await sequelize.authenticate()

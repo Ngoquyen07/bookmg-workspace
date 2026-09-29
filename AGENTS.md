@@ -2,7 +2,7 @@
 
 ## Project context
 
-- Requirements: `docs/README.reading-tracker.pdf`. The PDF defines the minimum deliverable; user-requested extensions are allowed. JWT authentication is an approved extension, not an implemented feature.
+- Requirements: `docs/README.reading-tracker.pdf`. Current scope is the assignment's single-user application without authentication, roles, or extra features. Add extensions only when explicitly requested again.
 - Frontend: `bookmg-repo-fe`, Vue 3 + Vite. Backend: `bookmg-repo-be`, Node.js + Express 5 + MySQL through Sequelize 6 and `mysql2`.
 - Keep JavaScript ES modules. TypeScript examples in imported skills do not authorize a TypeScript migration.
 - Read `README.md`, the relevant source files, and the applicable skills before editing. Inspect the actual implementation rather than assuming planned features exist.
@@ -34,7 +34,7 @@ The imported Conventional Commit skill's automatic commit step does not grant pe
 
 These roles describe responsibilities, not a requirement to spawn agents. Use delegation only when authorized. If parallel work is requested, agree on the API contract first and assign separate files.
 
-- **Backend:** Express APIs, Sequelize/MySQL, Open Library proxy, JWT and authorization, backend checks, deployment configuration.
+- **Backend:** Express APIs, Sequelize/MySQL, Open Library proxy, backend checks, deployment configuration.
 - **Frontend:** Vue components, UX, client validation and API integration, frontend checks.
 - **Reviewer / QA:** assignment coverage, business rules, auth and ownership boundaries, regression checks, live browser evidence.
 

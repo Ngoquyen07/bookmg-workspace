@@ -53,7 +53,7 @@ Sau khi đổi `.env`, khởi động lại server tương ứng.
 ## MySQL qua Sequelize
 
 Backend đã cài Sequelize 6 và driver `mysql2`. Kết nối dùng chung nằm ở
-`bookmg-repo-be/src/database.js`.
+`bookmg-repo-be/config/database.js`.
 
 Thêm cấu hình sau vào `bookmg-repo-be/.env`, thay tên database, tài khoản và
 mật khẩu bằng thông tin MySQL của bạn. Database phải tồn tại trước khi kết nối.
@@ -82,6 +82,19 @@ Chưa tạo bảng/model nghiệp vụ; server hiện tại vẫn chỉ có API 
 Lệnh `db:check` chỉ kiểm tra kết nối, không tạo hay sửa bảng.
 Git quản lý tại workspace;
 hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets.
+
+## Backend entrypoints and environment
+
+The backend uses root `app.js` for Express middleware/routes and root `server.js`
+for startup. `config/env.js` loads the backend `.env` with dotenv, preserving
+environment variables supplied by the shell or deployment platform.
+`config/database.js` exports the shared Sequelize connection. Startup verifies
+MySQL before opening the HTTP port; it does not create or alter tables.
+
+Run `npm run dev` for watch mode, `npm start` for normal startup,
+`npm run db:check` to verify MySQL, and `npm test` for backend checks.
+The frontend proxy check starts `app.js` independently of MySQL; it verifies HTTP
+routing, while `db:check` verifies the real configured database connection.
 
 ## GitHub workflow
 

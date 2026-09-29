@@ -1,6 +1,6 @@
 ---
 name: bookmg-project-flow
-description: Implement, review, test, or deploy the Mini Reading Tracker in this workspace, applying its assignment requirements, Vue/Express/MySQL stack, Sequelize data rules, and planned JWT authentication.
+description: Implement, review, test, or deploy the single-user Mini Reading Tracker in this workspace, applying its assignment requirements, Vue/Express/MySQL stack and Sequelize data rules.
 ---
 
 # Mini Reading Tracker project flow
@@ -13,7 +13,7 @@ skill and agent instructions in English.
 ## Stack and current boundaries
 
 - Keep Vue 3 + Vite, Express 5, JavaScript ES modules, MySQL, Sequelize 6 and `mysql2`.
-- Reuse `bookmg-repo-be/src/database.js` for ORM connections. Environment loading is provided by Node's `--env-file`; no additional dotenv package is needed for the current scripts.
+- Reuse `bookmg-repo-be/config/database.js` for ORM connections. `config/env.js` loads the backend `.env` with dotenv and preserves externally supplied environment variables. Root `app.js` configures Express; root `server.js` authenticates MySQL before listening.
 - Inspect current source and dependencies before planning changes. Installed Sequelize does not imply that models, migrations, authentication, or business APIs already exist.
 - Frontend dev requests use relative `/api` paths through the Vite proxy. Production needs its own API routing configuration.
 
@@ -38,7 +38,7 @@ skill and agent instructions in English.
 
 ## JWT extension and authorization
 
-JWT is the user's chosen authentication approach. Load the routed auth skill when implementing or reviewing it. The assignment itself does not require login.
+Authentication and roles are outside the current scope. The application follows the single-user assignment. Apply the following guidance only if the user explicitly requests authentication again.
 
 - Hash passwords with a maintained password-hashing library; never store plaintext. Verify tokens with a fixed algorithm allowlist, expiration, and configured issuer/audience when used. Keep signing secrets server-side in environment configuration.
 - Derive user identity from verified authentication. Scope shelf reads, writes, deletion, and statistics by the authenticated user; never trust a body/query `user_id` as proof of ownership.
