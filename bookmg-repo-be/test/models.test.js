@@ -11,10 +11,9 @@ test('book metadata supports missing fields and rejects invalid data', async () 
   await book.validate()
   assert.deepEqual(book.authors, [])
   assert.deepEqual(book.subjects, [])
-  assert.equal(book.totalPages, undefined)
   for (const data of [
     { id: '/works/OL82563W' }, { title: '   ' }, { authors: [42] },
-    { subjects: 'Fantasy' }, { totalPages: 0 }, { totalPages: 2.5 }, { editionId: 'OL82563W' },
+    { subjects: 'Fantasy' },
   ]) {
     await assert.rejects(Book.build({ id: 'OL82563W', title: 'Harry Potter', ...data }).validate())
   }
@@ -25,9 +24,11 @@ test('shelf entry defaults and validation preserve reading data boundaries', asy
   await entry.validate()
   assert.equal(entry.status, 'want_to_read')
   assert.equal(entry.currentPage, 0)
+  assert.equal(entry.totalPages, undefined)
   for (const data of [
     { status: 'unknown' }, { currentPage: -1 }, { currentPage: 1.5 },
     { rating: 0 }, { rating: 6 }, { rating: 2.5 }, { notes: 'x'.repeat(1001) },
+    { totalPages: 0 }, { totalPages: 2.5 }, { editionId: 'OL82563W' },
   ]) {
     await assert.rejects(ShelfEntry.build({ bookId: 'OL82563W', ...data }).validate())
   }

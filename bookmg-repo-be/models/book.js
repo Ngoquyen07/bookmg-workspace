@@ -35,14 +35,6 @@ const Book = sequelize.define('Book', {
     type: DataTypes.JSON, allowNull: false, defaultValue: [],
     validate: { stringArray },
   },
-  totalPages: {
-    type: DataTypes.INTEGER.UNSIGNED, allowNull: true,
-    validate: { isInt: true, min: 1, max: 4294967295 },
-  },
-  editionId: {
-    type: DataTypes.STRING(32), allowNull: true,
-    validate: { is: /^OL\d+M$/, len: [1, 32] },
-  },
 }, { tableName: 'books', timestamps: true })
 
 export default Book

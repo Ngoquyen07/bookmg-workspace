@@ -20,6 +20,14 @@ const ShelfEntry = sequelize.define('ShelfEntry', {
     type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0,
     validate: { isInt: true, min: 0, max: 4294967295 },
   },
+  editionId: {
+    type: DataTypes.STRING(32), allowNull: true,
+    validate: { is: /^OL\d+M$/, len: [1, 32] },
+  },
+  totalPages: {
+    type: DataTypes.INTEGER.UNSIGNED, allowNull: true,
+    validate: { isInt: true, min: 1, max: 4294967295 },
+  },
   rating: {
     type: DataTypes.TINYINT.UNSIGNED, allowNull: true,
     validate: { isInt: true, min: 1, max: 5 },

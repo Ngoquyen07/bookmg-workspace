@@ -70,3 +70,42 @@ export async function getCover(coverId) {
     return bytes
   }, API_ERRORS.COVER_NOT_FOUND)
 }
+
+export async function getWork(workId) {
+  return request(`${OPEN_LIBRARY_URLS.WORKS}${workId}.json`, async response => {
+    const work = await response.json()
+    if (work?.key !== `/works/${workId}` || typeof work.title !== 'string' || !work.title.trim() || work.title.length > 500) {
+      throw new ApiError(API_ERRORS.OPEN_LIBRARY_ERROR)
+    }
+    const authorKeys = Array.isArray(work.authors)
+      ? work.authors.map(item => item?.author?.key).filter(key => /^\/authors\/OL\d+A$/.test(key))
+      : []
+    const authors = await Promise.all([...new Set(authorKeys)].map(async key => {
+      return request(`${OPEN_LIBRARY_URLS.AUTHORS}${key.slice('/authors/'.length)}.json`, async authorResponse => {
+        const author = await authorResponse.json()
+        if (typeof author?.name !== 'string' || !author.name.trim()) throw new ApiError(API_ERRORS.OPEN_LIBRARY_ERROR)
+        return author.name
+      })
+    }))
+    const year = typeof work.first_publish_date === 'string' ? Number(work.first_publish_date.match(/\b\d{4}\b/)?.[0]) : null
+    const coverId = Array.isArray(work.covers) ? work.covers.map(id => positiveInteger(id, 4294967295)).find(Boolean) ?? null : null
+    const description = typeof work.description === 'string' ? work.description : work.description?.value
+    return {
+      id: workId, title: work.title, authors, coverId,
+      firstPublishYear: positiveInteger(year, 65535),
+      description: typeof description === 'string' ? description : null,
+      subjects: Array.isArray(work.subjects) ? work.subjects.filter(item => typeof item === 'string') : [],
+    }
+  }, API_ERRORS.BOOK_NOT_FOUND)
+}
+
+export async function getEdition(editionId, workId) {
+  return request(`${OPEN_LIBRARY_URLS.BOOKS}${editionId}.json`, async response => {
+    const edition = await response.json()
+    if (edition?.key !== `/books/${editionId}` || !Array.isArray(edition.works) ||
+        !edition.works.some(item => item?.key === `/works/${workId}`)) {
+      throw new ApiError(API_ERRORS.VALIDATION_ERROR)
+    }
+    return { editionId, totalPages: positiveInteger(edition.number_of_pages, 4294967295) }
+  }, API_ERRORS.VALIDATION_ERROR)
+}

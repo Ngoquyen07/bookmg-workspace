@@ -86,12 +86,13 @@ hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets
 ## Book and shelf schema
 
 `models/book.js` stores shared book metadata: Open Library work ID (`OL...W`),
-title, authors, cover ID, first publication year, description, subjects, total
-pages and optional edition ID (`OL...M`). Authors and subjects are JSON arrays.
+title, authors, cover ID, first publication year, description and subjects.
+Authors and subjects are JSON arrays.
 Unknown page counts are `null`, never zero. Both models include timestamps.
 
 `models/shelfEntry.js` stores shelf membership: ID, book ID, reading status,
-current page, optional integer rating (1–5), notes (up to 1,000 characters),
+current page, optional edition ID (`OL...M`) and total pages, optional integer
+rating (1–5), notes (up to 1,000 characters),
 reading start date and completion date. Status values are `want_to_read`,
 `reading` and `finished`.
 
@@ -118,10 +119,9 @@ migrations, persistence, constraints and rollback in a randomly named temporary
 database, then deletes that database. Its account needs CREATE/DROP DATABASE
 privileges; it does not change the application database.
 
-Progress limits against a book's page count, automatic completion, date
-transitions and atomic book/shelf creation belong to the upcoming service layer.
-Search and detail requests will not create database records; adding to the shelf
-will persist them.
+Progress updates and automatic completion are future work. Search requests do
+not create database records; adding to the shelf persists both records in one
+transaction.
 
 ## Backend entrypoints and environment
 
@@ -238,8 +238,27 @@ See the official [search API](https://openlibrary.org/dev/docs/api/search),
 [usage guidelines](https://openlibrary.org/developers/api).
 
 Run `npm test` in the backend for HTTP, normalization, validation and failure
-checks with mocked upstream responses and shelf reads. Book detail, edition/page
-lookup and shelf CRUD endpoints are not implemented yet.
+checks with mocked upstream responses and shelf reads. `npm run db:test` checks
+the add-to-shelf transaction against a temporary MySQL database.
+
+## Add a book to the shelf
+
+`POST /api/shelf` accepts a work ID, optional initial status (`want_to_read`,
+`reading`, `finished`; default `want_to_read`) and optional edition ID:
+
+```json
+{"workId":"OL82563W","editionId":"OL62514708M","status":"reading"}
+```
+
+The backend reads work metadata and author names from Open Library. If an edition
+is supplied, it checks that the edition belongs to the work and reads its page
+count. Without an edition, total pages remain `null`. External requests finish
+before the database transaction. The transaction reuses an existing book when
+present and creates one shelf entry; failures roll back both writes. A duplicate
+entry returns 409. Invalid input or an unrelated edition returns 400, a missing
+work returns 404, and upstream failures return 502/504. A successful add returns
+201 with `data.book` and `data.shelfEntry`. See `requests/shelf.http` for manual
+requests. Run `npm run db:migrate` before using this endpoint.
 
 ## GitHub workflow
 
