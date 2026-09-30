@@ -1,0 +1,66 @@
+# Complete read/add flow for VS Code REST Client.
+# Start the backend: cd D:\bookmg-workspace\bookmg-repo-be ; npm.cmd run dev
+# Run requests from top to bottom using "Send Request" above each block.
+# All requests use our backend; the frontend never needs to call Open Library.
+# Verified Open Library sample (2026-09-30):
+# Work OL27482W = The Hobbit; edition OL61641547M belongs to it and has 306 pages.
+# Open Library's Search year is 1937, while its Work first_publish_date is
+# "January 1938". The backend detail/add responses use the Work value (1938).
+# Public metadata can change; the IDs and expected values here are sample data.
+
+@baseUrl = http://127.0.0.1:3000
+@workId = OL27482W
+@editionId = OL61641547M
+@coverId = 14627509
+
+### 1. Confirm the backend is running: 200
+GET {{baseUrl}}/api/health
+
+### 2. Search by title: 200; find OL27482W in data and note isInShelf
+GET {{baseUrl}}/api/books/search?q=The%20Hobbit&field=title&page=1&limit=20
+
+### 3. Read normalized details: 200; editionId OL61641547M, totalPages 306
+### If the work is already in your shelf, saved edition/pages take precedence.
+GET {{baseUrl}}/api/books/{{workId}}
+
+### 4. Fetch its cover through the backend: 200 image/jpeg
+GET {{baseUrl}}/api/books/covers/{{coverId}}
+
+### 5. Add it as reading: first request 201; later requests 409
+### This is the only request below that writes to MySQL.
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}",
+  "editionId": "{{editionId}}",
+  "status": "reading"
+}
+
+### 6. Read details again: 200; isInShelf true, saved totalPages 306
+GET {{baseUrl}}/api/books/{{workId}}
+
+### 7. List all shelf books, newest first: 200
+GET {{baseUrl}}/api/shelf
+
+### 8. Show reading books only: 200; The Hobbit should appear
+GET {{baseUrl}}/api/shelf?status=reading
+
+### 9. Show finished books only: 200; may be empty
+GET {{baseUrl}}/api/shelf?status=finished
+
+### 10. Count all books and statuses: 200
+GET {{baseUrl}}/api/shelf/stats
+
+### 11. Confirm duplicate protection: 409 BOOK_ALREADY_IN_SHELF
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}",
+  "editionId": "{{editionId}}",
+  "status": "reading"
+}
+
+### Optional: compare your existing Harry Potter entry; saved page count may be null
+GET {{baseUrl}}/api/books/OL82563W

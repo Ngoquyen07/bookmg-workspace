@@ -21,3 +21,12 @@ Content-Type: application/json
   "editionId": "{{editionId}}",
   "status": "reading"
 }
+
+### All shelf entries, newest first
+GET {{baseUrl}}/api/shelf
+
+### Filter by reading status
+GET {{baseUrl}}/api/shelf?status=reading
+
+### Counts for the shelf dashboard
+GET {{baseUrl}}/api/shelf/stats

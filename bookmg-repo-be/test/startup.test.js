@@ -5,14 +5,14 @@ import request from 'supertest'
 import app from '../app.js'
 
 test('health and HTTP errors use JSON responses', async () => {
-  await request(app).get('/api/health').expect(200, { data: { status: 'ok' } })
-  await request(app).get('/missing').expect(404, { error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found' } })
+  await request(app).get('/api/health').expect(200, { status: 200, data: { status: 'ok' } })
+  await request(app).get('/missing').expect(404, { status: 404, error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found' } })
   await request(app).post('/missing').set('Content-Type', 'application/json')
-    .send('{').expect(400, { error: { code: 'INVALID_JSON', message: 'Invalid JSON body' } })
+    .send('{').expect(400, { status: 400, error: { code: 'INVALID_JSON', message: 'Invalid JSON body' } })
   await request(app).post('/missing').send({ value: 'x'.repeat(110_000) })
-    .expect(413, { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } })
+    .expect(413, { status: 413, error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } })
   await request(app).get('/api/books/covers/%ZZ')
-    .expect(400, { error: { code: 'VALIDATION_ERROR', message: 'Invalid request data' } })
+    .expect(400, { status: 400, error: { code: 'VALIDATION_ERROR', message: 'Invalid request data' } })
 })
 
 test('server exits without listening when MySQL is unavailable', () => {

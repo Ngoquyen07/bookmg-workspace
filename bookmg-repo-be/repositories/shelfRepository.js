@@ -39,3 +39,39 @@ export async function addBookToShelf(bookData, shelfData) {
     throw error
   }
 }
+
+export async function findShelfEntryByBookId(bookId) {
+  try {
+    const { ShelfEntry } = await import('../models/index.js')
+    return await ShelfEntry.findOne({
+      attributes: ['editionId', 'totalPages'], where: { bookId }, raw: true,
+    })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.findShelfEntryByBookId')
+    throw error
+  }
+}
+
+export async function listShelfEntries(status) {
+  try {
+    const { Book, ShelfEntry } = await import('../models/index.js')
+    return await ShelfEntry.findAll({
+      where: status ? { status } : {},
+      include: { model: Book, as: 'book' },
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
+    })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.listShelfEntries')
+    throw error
+  }
+}
+
+export async function countShelfEntriesByStatus() {
+  try {
+    const { ShelfEntry } = await import('../models/index.js')
+    return await ShelfEntry.count({ group: ['status'] })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.countShelfEntriesByStatus')
+    throw error
+  }
+}

@@ -17,7 +17,7 @@ npm run dev
 ```
 
 Backend chạy ở http://127.0.0.1:3000. Kiểm tra bằng
-http://127.0.0.1:3000/api/health, trả về `{"data":{"status":"ok"}}`.
+http://127.0.0.1:3000/api/health, trả về `{"status":200,"data":{"status":"ok"}}`.
 Host và cổng được lấy từ `BASE_URL` trong `bookmg-repo-be/.env`.
 
 Frontend:
@@ -147,10 +147,12 @@ Daily files are retained until removed; automatic retention is not configured.
 
 ## API response contract
 
-JSON success responses use `{ "data": ... }`, with optional `meta` for pagination.
-Errors use `{ "error": { "code": "...", "message": "..." } }` and the appropriate
-HTTP status. The frontend should branch on `error.code`, not message text.
-Binary cover responses will use their image content type rather than this JSON envelope.
+JSON success responses use `{ "status": 200, "data": ... }`, with optional
+`meta` for list counts and pagination. Errors use `{ "status": 400, "error": { "code": "...",
+"message": "..." } }`. The numeric `status` always matches the HTTP status
+(for example, 201 for creation or 409 for a duplicate). The frontend should
+branch on `error.code`, not message text. Binary cover responses remain JPEG;
+their status is available as the HTTP `Response.status` value.
 
 `constants/responseConstants.js` defines status codes and public errors;
 `constants/logConstants.js` defines log levels and operational messages.
@@ -198,6 +200,7 @@ or shelf entries. Native Node.js `fetch` calls fixed upstream hosts with a
 | --- | --- | --- |
 | GET | `/api/books/search?q=Harry%20Potter&page=1&limit=20` | Search books and mark existing shelf entries |
 | GET | `/api/books/covers/15155833` | Proxy a medium JPEG cover through the backend |
+| GET | `/api/books/OL82563W` | Read normalized work details and a suggested edition with a page count |
 
 Search parameters: required nonblank `q` (up to 200 characters), optional `field`
 (`all`, `title`, or `author`; default `all`), `page` (1–10,000; default 1), and
@@ -206,6 +209,7 @@ Open Library's general search; title/author modes use their respective fields.
 
 ```json
 {
+  "status": 200,
   "data": [
     {
       "id": "OL82563W",
@@ -217,11 +221,13 @@ Open Library's general search; title/author modes use their respective fields.
       "isInShelf": false
     }
   ],
-  "meta": { "page": 1, "limit": 20, "total": 4063, "totalPages": 204 }
+  "meta": { "page": 1, "limit": 20, "count": 1, "total": 4063, "totalPages": 204 }
 }
 ```
 
 The response above illustrates the format; search totals and metadata may change.
+`meta.count` is the number of books in this page; `meta.total` is the number
+of matches across all pages.
 Missing authors become `[]`; missing cover/year values become `null`.
 The frontend uses the returned relative `coverUrl`, with a local placeholder if
 it is null or the cover is unavailable. Successful covers have a one-day browser
@@ -259,6 +265,32 @@ entry returns 409. Invalid input or an unrelated edition returns 400, a missing
 work returns 404, and upstream failures return 502/504. A successful add returns
 201 with `data.book` and `data.shelfEntry`. See `requests/shelf.http` for manual
 requests. Run `npm run db:migrate` before using this endpoint.
+
+## Book details and shelf reads
+
+`GET /api/books/:workId` validates an Open Library work ID and returns work
+metadata, a relative `coverUrl`, `isInShelf`, `editionId`, and `totalPages`.
+For a book already in the shelf, the edition and page count come from its saved
+shelf entry. Otherwise, the backend checks the first 50 Open Library editions
+and suggests the first one with a valid page count. That page count belongs to
+the returned `editionId`, not to every edition of the work. If none is found,
+both fields are `null`. The endpoint only reads data; the frontend may send
+the suggested `editionId` to `POST /api/shelf`. Invalid IDs or query parameters
+return 400; missing works return 404.
+
+`GET /api/shelf` returns all shelf entries, newest first. Optional `status` can
+be `want_to_read`, `reading`, or `finished`; unknown query parameters and status
+values return 400. Each item has `{ book, shelfEntry, progressPercent }`.
+The book includes a relative `coverUrl`. `progressPercent` is rounded to the
+nearest integer when `totalPages` is known, and `null` otherwise. An empty
+shelf or filter returns `{ "status": 200, "data": [], "meta": { "count": 0 } }`.
+`meta.count` is the number of entries matching the current filter. The shelf
+list is not paginated, so it also equals the number of returned entries.
+
+`GET /api/shelf/stats` returns `{ "status": 200, "data": { "total": 0,
+"wantToRead": 0, "reading": 0, "finished": 0 } }` for an empty shelf and the corresponding
+counts otherwise. It rejects query parameters with 400. Both shelf reads use
+MySQL only; they do not call Open Library. Try them with `requests/shelf.http`.
 
 ## GitHub workflow
 

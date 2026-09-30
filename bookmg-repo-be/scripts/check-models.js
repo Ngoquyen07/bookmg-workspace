@@ -36,7 +36,7 @@ try {
   created = true
   process.env.DB_NAME = databaseName
   migrate('db:migrate', ['--to', '202609290002-create-shelf-entries.js'])
-  const now = new Date()
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
   await administrator.query(`INSERT INTO \`${databaseName}\`.books
     (id, title, authors, subjects, totalPages, editionId, createdAt, updatedAt)
     VALUES ('OL1W', 'Existing book', '[]', '[]', 100, 'OL1M', ?, ?)`, [now, now])
@@ -83,7 +83,15 @@ try {
       key: '/works/OL2W', title: 'New book', authors: [{ author: { key: '/authors/OL1A' } }],
       covers: [123], subjects: ['Fiction'], first_publish_date: '2001',
     })
+    if (path === '/works/OL3W.json') return Response.json({
+      key: '/works/OL3W', title: 'Book without pages', authors: [],
+    })
     if (path === '/authors/OL1A.json') return Response.json({ name: 'Test Author' })
+    if (path === '/works/OL2W/editions.json') return Response.json({ entries: [
+      { key: '/books/OL9M' },
+      { key: '/books/OL2M', number_of_pages: 250 },
+    ] })
+    if (path === '/works/OL3W/editions.json') return Response.json({ entries: [] })
     if (path === '/books/OL2M.json') return Response.json({
       key: '/books/OL2M', works: [{ key: '/works/OL2W' }], number_of_pages: 250,
     })
@@ -94,6 +102,23 @@ try {
   }
   try {
     const api = request(app)
+    let detail = await api.get('/api/books/OL2W')
+    assert.equal(detail.status, 200)
+    assert.equal(detail.body.status, detail.status)
+    assert.equal(detail.body.data.isInShelf, false)
+    assert.equal(detail.body.data.editionId, 'OL2M')
+    assert.equal(detail.body.data.totalPages, 250)
+    assert.equal(detail.body.data.coverUrl, '/api/books/covers/123')
+    assert.deepEqual(detail.body.data.authors, ['Test Author'])
+    assert.equal(await Book.count({ where: { id: 'OL2W' } }), 0)
+    detail = await api.get('/api/books/OL3W')
+    assert.equal(detail.status, 200)
+    assert.equal(detail.body.data.editionId, null)
+    assert.equal(detail.body.data.totalPages, null)
+    assert.equal((await api.get('/api/books/OL404W')).status, 404)
+    assert.equal((await api.get('/api/books/invalid')).status, 400)
+    assert.equal((await api.get('/api/books/OL2W?extra=1')).status, 400)
+
     let response = await api.post('/api/shelf').send({ workId: 'OL2W', editionId: 'OL3M' })
     assert.equal(response.status, 400)
     assert.equal(await Book.count({ where: { id: 'OL2W' } }), 0)
@@ -102,9 +127,32 @@ try {
 
     response = await api.post('/api/shelf').send({ workId: 'OL2W', editionId: 'OL2M', status: 'finished' })
     assert.equal(response.status, 201, JSON.stringify(response.body))
+    assert.equal(response.body.status, response.status)
     assert.equal(response.body.data.shelfEntry.currentPage, 250)
     assert.equal(response.body.data.shelfEntry.totalPages, 250)
     assert.deepEqual(response.body.data.book.authors, ['Test Author'])
+    detail = await api.get('/api/books/OL2W')
+    assert.equal(detail.body.data.isInShelf, true)
+    assert.equal(detail.body.data.totalPages, 250)
+    response = await api.get('/api/shelf')
+    assert.equal(response.status, 200)
+    assert.equal(response.body.status, response.status)
+    assert.deepEqual(response.body.meta, { count: 2 })
+    assert.deepEqual(response.body.data.map(item => item.shelfEntry.bookId), ['OL2W', 'OL1W'])
+    assert.deepEqual(response.body.data.map(item => item.progressPercent), [100, 12])
+    response = await api.get('/api/shelf?status=finished')
+    assert.deepEqual(response.body.meta, { count: 1 })
+    assert.deepEqual(response.body.data.map(item => item.shelfEntry.bookId), ['OL2W'])
+    response = await api.get('/api/shelf?status=want_to_read')
+    assert.deepEqual(response.body.meta, { count: 0 })
+    assert.deepEqual(response.body.data, [])
+    assert.equal((await api.get('/api/shelf?status=invalid')).status, 400)
+    assert.equal((await api.get('/api/shelf?other=1')).status, 400)
+    response = await api.get('/api/shelf/stats')
+    assert.equal(response.body.status, response.status)
+    assert.deepEqual(response.body.data, { total: 2, wantToRead: 0, reading: 1, finished: 1 })
+    assert.equal((await api.get('/api/shelf/stats?status=reading')).status, 400)
+
     response = await api.post('/api/shelf').send({ workId: 'OL2W' })
     assert.equal(response.status, 409)
     response = await api.post('/api/shelf').send({ workId: 'OL2W', unexpected: true })
@@ -116,6 +164,9 @@ try {
     assert.equal(response.body.data.shelfEntry.totalPages, null)
     assert.ok(response.body.data.shelfEntry.startedAt)
     assert.equal(await Book.count({ where: { id: 'OL2W' } }), 1)
+    response = await api.get('/api/shelf?status=reading')
+    assert.deepEqual(response.body.meta, { count: 2 })
+    assert.deepEqual(response.body.data.map(item => item.progressPercent), [null, 12])
 
     await ShelfEntry.destroy({ where: { bookId: 'OL2W' } })
     response = await api.post('/api/shelf').send({ workId: 'OL2W' })
@@ -136,13 +187,15 @@ try {
   }
   await entry.destroy()
   assert.ok(await Book.findByPk(book.id))
+  const emptyStats = await request(app).get('/api/shelf/stats')
+  assert.deepEqual(emptyStats.body.data, { total: 0, wantToRead: 0, reading: 0, finished: 0 })
   await database.close()
   database = undefined
 
   migrate('db:migrate:undo:all')
   const [tables] = await administrator.query(`SHOW TABLES FROM \`${databaseName}\``)
   assert.deepEqual(tables.map(row => Object.values(row)[0].toLowerCase()), ['sequelizemeta'])
-  console.log('MySQL checks OK: migration/backfill, constraints, shelf API and transaction rollback')
+  console.log('MySQL checks OK: migration/backfill, shelf add/detail/list/stats and rollback')
 } catch (error) {
   console.error('MySQL schema checks failed:', error.original?.code ?? error.code ?? error.name)
   if (error.name === 'AssertionError') console.error(error.message)

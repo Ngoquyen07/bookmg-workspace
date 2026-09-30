@@ -35,11 +35,12 @@ test('search normalizes metadata and checks shelf membership in one read', async
   t.mock.method(ShelfEntry, 'create', () => { throw new Error('Search must not write') })
   const result = await request(app).get('/api/books/search').query({ q: ' Harry & Potter ', page: 2, limit: 2 }).expect(200)
   assert.deepEqual(result.body, {
+    status: 200,
     data: [
       { id: 'OL1W', title: 'Harry Potter', authors: ['Author'], coverId: 123, coverUrl: '/api/books/covers/123', firstPublishYear: 1997, isInShelf: true },
       { id: 'OL2W', title: 'Missing metadata', authors: [], coverId: null, coverUrl: null, firstPublishYear: null, isInShelf: false },
     ],
-    meta: { page: 2, limit: 2, total: 5, totalPages: 3 },
+    meta: { page: 2, limit: 2, count: 2, total: 5, totalPages: 3 },
   })
   assert.equal(upstream.mock.callCount(), 1)
   assert.equal(lookup.mock.callCount(), 1)
@@ -57,7 +58,8 @@ test('title/author search forwards the right field and empty results skip MySQL'
       return json({ num_found: 0, docs: [] })
     })
     await request(app).get('/api/books/search').query({ q: 'Tolkien', field }).expect(200, {
-      data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      status: 200,
+      data: [], meta: { page: 1, limit: 20, count: 0, total: 0, totalPages: 0 },
     })
     t.mock.restoreAll()
     t.mock.method(ShelfEntry, 'findAll', () => { throw new Error('Empty search must skip MySQL') })
@@ -72,10 +74,12 @@ test('invalid query and cover IDs are rejected before upstream calls', async t =
     { q: 'x', limit: 51 }, { q: 'x', unexpected: 'field' },
   ]) {
     const result = await request(app).get('/api/books/search').query(query).expect(400)
+    assert.equal(result.body.status, result.status)
     assert.equal(result.body.error.code, 'VALIDATION_ERROR')
   }
   for (const id of ['0', '-1', 'abc', '4294967296']) {
     const result = await request(app).get(`/api/books/covers/${id}`).expect(400)
+    assert.equal(result.body.status, result.status)
     assert.equal(result.body.error.code, 'VALIDATION_ERROR')
   }
   assert.equal(upstream.mock.callCount(), 0)
@@ -92,6 +96,7 @@ test('upstream failures and invalid payloads produce safe 502/504 errors', async
   ]) {
     t.mock.method(globalThis, 'fetch', fetchResponse)
     const result = await request(app).get('/api/books/search?q=Harry').expect(status)
+    assert.equal(result.body.status, result.status)
     assert.equal(result.body.error.code, code)
     assert.doesNotMatch(result.text, /private|stack/)
     t.mock.restoreAll()
@@ -107,6 +112,7 @@ test('database failure is an error, not a false already-added badge', async t =>
     throw error
   })
   const result = await request(app).get('/api/books/search?q=Book').expect(500)
+  assert.equal(result.body.status, result.status)
   assert.equal(result.body.error.code, 'INTERNAL_SERVER_ERROR')
   assert.doesNotMatch(result.text, /private SQL/)
   const failure = log.mock.calls.find(call => call.arguments[1].code === 'INTERNAL_SERVER_ERROR')
@@ -126,6 +132,7 @@ test('timeout while consuming the upstream body also returns 504', async t => {
     json: async () => { throw new DOMException('Body aborted', 'AbortError') },
   }))
   const result = await request(app).get('/api/books/search?q=Book').expect(504)
+  assert.equal(result.body.status, result.status)
   assert.equal(result.body.error.code, 'OPEN_LIBRARY_TIMEOUT')
 })
 
@@ -141,9 +148,11 @@ test('cover proxy returns JPEG bytes and handles missing or invalid images', asy
   t.mock.restoreAll()
   t.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 404 }))
   const missing = await request(app).get('/api/books/covers/123').expect(404)
+  assert.equal(missing.body.status, missing.status)
   assert.equal(missing.body.error.code, 'COVER_NOT_FOUND')
   t.mock.restoreAll()
   t.mock.method(globalThis, 'fetch', async () => new Response('HTML', { headers: { 'Content-Type': 'image/jpeg' } }))
   const invalid = await request(app).get('/api/books/covers/123').expect(502)
+  assert.equal(invalid.body.status, invalid.status)
   assert.equal(invalid.body.error.code, 'OPEN_LIBRARY_ERROR')
 })

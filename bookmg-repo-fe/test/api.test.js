@@ -30,7 +30,7 @@ test('FE proxies /api to BE using environment URLs', { timeout: 15000 }, async (
     assert.equal(frontend.config.server.port, 15173)
     const response = await fetch(`${process.env.BASE_URL}/api/health`)
     assert.equal(response.status, 200)
-    assert.deepEqual(await response.json(), { data: { status: 'ok' } })
+    assert.deepEqual(await response.json(), { status: 200, data: { status: 'ok' } })
   } finally {
     await frontend?.close()
     backend.kill()

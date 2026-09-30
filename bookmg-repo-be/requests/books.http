@@ -39,3 +39,6 @@ GET {{baseUrl}}/api/books/search?q=Harry%20Potter&page=0
 GET https://openlibrary.org/works/{{workId}}.json
 Accept: application/json
 User-Agent: MiniReadingTracker/1.0
+
+### Normalized book details through the backend; expected 200
+GET {{baseUrl}}/api/books/{{workId}}

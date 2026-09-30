@@ -109,3 +109,17 @@ export async function getEdition(editionId, workId) {
     return { editionId, totalPages: positiveInteger(edition.number_of_pages, 4294967295) }
   }, API_ERRORS.VALIDATION_ERROR)
 }
+
+export async function getSuggestedEdition(workId) {
+  return request(`${OPEN_LIBRARY_URLS.WORKS}${workId}/editions.json?limit=50`, async response => {
+    const result = await response.json()
+    if (!Array.isArray(result?.entries)) throw new ApiError(API_ERRORS.OPEN_LIBRARY_ERROR)
+    const edition = result.entries.find(item =>
+      /^\/books\/OL\d+M$/.test(item?.key) && positiveInteger(item.number_of_pages, 4294967295),
+    )
+    return edition ? {
+      editionId: edition.key.slice('/books/'.length),
+      totalPages: edition.number_of_pages,
+    } : { editionId: null, totalPages: null }
+  })
+}

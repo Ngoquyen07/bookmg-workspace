@@ -8,9 +8,18 @@ const addSchema = Joi.object({
   status: Joi.string().valid(...Object.values(READING_STATUS)).default(READING_STATUS.WANT_TO_READ),
   editionId: Joi.string().pattern(/^OL\d+M$/).max(32).optional(),
 })
+const listSchema = Joi.object({
+  status: Joi.string().valid(...Object.values(READING_STATUS)),
+})
 
 export function validateAddBook(body) {
   const { error, value } = addSchema.validate(body)
   if (error) throw new ApiError(API_ERRORS.VALIDATION_ERROR)
   return value
+}
+
+export function validateShelfFilter(query) {
+  const { error, value } = listSchema.validate(query)
+  if (error) throw new ApiError(API_ERRORS.VALIDATION_ERROR)
+  return value.status
 }
