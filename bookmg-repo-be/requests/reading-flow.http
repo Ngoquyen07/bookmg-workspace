@@ -1,6 +1,7 @@
 # Complete read/add flow for VS Code REST Client.
 # Start the backend: cd D:\bookmg-workspace\bookmg-repo-be ; npm.cmd run dev
 # Run requests from top to bottom using "Send Request" above each block.
+# POST, PATCH, and DELETE requests below change your local shelf.
 # All requests use our backend; the frontend never needs to call Open Library.
 # Verified Open Library sample (2026-09-30):
 # Work OL27482W = The Hobbit; edition OL61641547M belongs to it and has 306 pages.
@@ -27,7 +28,7 @@ GET {{baseUrl}}/api/books/{{workId}}
 GET {{baseUrl}}/api/books/covers/{{coverId}}
 
 ### 5. Add it as reading: first request 201; later requests 409
-### This is the only request below that writes to MySQL.
+### This writes to MySQL.
 POST {{baseUrl}}/api/shelf
 Content-Type: application/json
 
@@ -61,6 +62,53 @@ Content-Type: application/json
   "editionId": "{{editionId}}",
   "status": "reading"
 }
+
+### 12. Record progress, rating, and notes: 200; currentPage 75
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
+  "currentPage": 75,
+  "rating": 5,
+  "notes": "A good read"
+}
+
+### 13. Reach the known page count: 200; status becomes finished
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
+  "currentPage": 306
+}
+
+### 14. Counts now include one more finished book
+GET {{baseUrl}}/api/shelf/stats
+
+### 15. Resume reading: 200; clears finishedAt and keeps startedAt
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
+  "currentPage": 120
+}
+
+### 16. Invalid progress: 400 VALIDATION_ERROR; stored page remains 120
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
+  "currentPage": 307
+}
+
+### 17. Optional: remove from shelf after confirming in the UI
+### This deletes both the shelf entry and book metadata in one transaction.
+DELETE {{baseUrl}}/api/shelf/{{workId}}
+
+### 18. Confirm it is gone from the shelf
+GET {{baseUrl}}/api/shelf?status=reading
+
+### 19. Repeating the delete returns 404 SHELF_ENTRY_NOT_FOUND
+DELETE {{baseUrl}}/api/shelf/{{workId}}
 
 ### Optional: compare your existing Harry Potter entry; saved page count may be null
 GET {{baseUrl}}/api/books/OL82563W

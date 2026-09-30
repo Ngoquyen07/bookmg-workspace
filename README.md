@@ -85,7 +85,7 @@ hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets
 
 ## Book and shelf schema
 
-`models/book.js` stores shared book metadata: Open Library work ID (`OL...W`),
+`models/book.js` stores book metadata: Open Library work ID (`OL...W`),
 title, authors, cover ID, first publication year, description and subjects.
 Authors and subjects are JSON arrays.
 Unknown page counts are `null`, never zero. Both models include timestamps.
@@ -98,8 +98,9 @@ reading start date and completion date. Status values are `want_to_read`,
 
 Import models through `models/index.js` to register associations. A book has
 zero or one shelf entry in the current single-user application. Each shelf entry
-belongs to one book; `bookId` is a unique foreign key. Removing a shelf entry
-keeps its book metadata. MySQL rejects deletion of a book still on the shelf.
+belongs to one book; `bookId` is a unique foreign key. Removing a book from the
+shelf deletes both rows in a transaction. MySQL rejects deletion of a book
+while its shelf entry still exists.
 There is no user model or authentication in this scope.
 
 Run these commands from `bookmg-repo-be`:
@@ -119,9 +120,9 @@ migrations, persistence, constraints and rollback in a randomly named temporary
 database, then deletes that database. Its account needs CREATE/DROP DATABASE
 privileges; it does not change the application database.
 
-Progress updates and automatic completion are future work. Search requests do
-not create database records; adding to the shelf persists both records in one
-transaction.
+Search requests do not create database records; adding to the shelf persists
+both records in one transaction. Shelf updates validate progress and change
+reading dates in a transaction.
 
 ## Backend entrypoints and environment
 
@@ -291,6 +292,32 @@ list is not paginated, so it also equals the number of returned entries.
 "wantToRead": 0, "reading": 0, "finished": 0 } }` for an empty shelf and the corresponding
 counts otherwise. It rejects query parameters with 400. Both shelf reads use
 MySQL only; they do not call Open Library. Try them with `requests/shelf.http`.
+
+## Update or remove a shelf book
+
+`PATCH /api/shelf/:bookId` accepts one or more of `currentPage` (integer from
+zero through the known total), `status` (`want_to_read`, `reading`, `finished`),
+`rating` (integer 1–5 or `null` to clear), and `notes` (up to 1,000 characters
+or `null` to clear). Other fields, empty bodies, and invalid work IDs return 400.
+The response's `data` is the updated shelf entry. Updates use a row lock and
+transaction so page, status, and reading dates change together.
+
+When the page reaches a known total, status becomes `finished` and `finishedAt`
+is set. Setting status to `finished` without a page sets the page to the known
+total; sending a conflicting lower page returns 400. Lowering the page of a
+finished book without specifying a status changes it back to `reading` and
+clears `finishedAt`. The first transition to `reading` sets `startedAt`, which
+is preserved thereafter. Without a known total, a page may be recorded but
+does not automatically finish the book; the user can explicitly choose
+`finished`. Unknown page counts still yield `progressPercent: null` in lists.
+
+`DELETE /api/shelf/:bookId` removes the shelf entry, then its book metadata in
+one transaction, and returns
+`{ "status": 200, "data": { "bookId": "OL...W", "removed": true } }`.
+If either deletion fails, both are rolled back. Adding the work again creates
+new rows in both tables. Both endpoints return 404 `SHELF_ENTRY_NOT_FOUND`
+when the work is not in the shelf. The
+frontend must ask for confirmation before sending the DELETE request.
 
 ## GitHub workflow
 

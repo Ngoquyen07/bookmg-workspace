@@ -1,5 +1,5 @@
-import { addBook, listBooks, getStats } from '../services/shelfService.js'
-import { validateAddBook, validateShelfFilter } from '../validation/shelfValidation.js'
+import { addBook, listBooks, getStats, updateBook, removeBook } from '../services/shelfService.js'
+import { validateAddBook, validateShelfFilter, validateShelfBookId, validateShelfUpdate } from '../validation/shelfValidation.js'
 import { API_ERRORS, HTTP_STATUS } from '../constants/responseConstants.js'
 import { sendSuccess, sendError } from '../utils/apiResponse.js'
 import ApiError from '../utils/apiError.js'
@@ -31,6 +31,25 @@ export async function getShelfStats(req, res) {
     return sendSuccess(res, await getStats())
   } catch (error) {
     logger.logError(error, 'shelfController.getShelfStats', req)
+    return sendError(res, error)
+  }
+}
+
+export async function updateShelfBook(req, res) {
+  try {
+    const bookId = validateShelfBookId(req.params, req.query)
+    return sendSuccess(res, await updateBook(bookId, validateShelfUpdate(req.body)))
+  } catch (error) {
+    logger.logError(error, 'shelfController.updateShelfBook', req)
+    return sendError(res, error)
+  }
+}
+
+export async function deleteShelfBook(req, res) {
+  try {
+    return sendSuccess(res, await removeBook(validateShelfBookId(req.params, req.query)))
+  } catch (error) {
+    logger.logError(error, 'shelfController.deleteShelfBook', req)
     return sendError(res, error)
   }
 }

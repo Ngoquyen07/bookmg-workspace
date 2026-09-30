@@ -32,6 +32,9 @@ export const API_ERRORS = Object.freeze({
   BOOK_ALREADY_IN_SHELF: Object.freeze({
     status: HTTP_STATUS.CONFLICT, code: 'BOOK_ALREADY_IN_SHELF', message: 'Book is already in the shelf',
   }),
+  SHELF_ENTRY_NOT_FOUND: Object.freeze({
+    status: HTTP_STATUS.NOT_FOUND, code: 'SHELF_ENTRY_NOT_FOUND', message: 'Book is not in the shelf',
+  }),
   OPEN_LIBRARY_ERROR: Object.freeze({
     status: HTTP_STATUS.BAD_GATEWAY, code: 'OPEN_LIBRARY_ERROR', message: 'Unable to retrieve Open Library data',
   }),

@@ -75,3 +75,38 @@ export async function countShelfEntriesByStatus() {
     throw error
   }
 }
+
+export async function updateShelfEntry(bookId, applyChanges) {
+  try {
+    const { sequelize } = await import('../config/database.js')
+    const { ShelfEntry } = await import('../models/index.js')
+    return await sequelize.transaction(async transaction => {
+      const entry = await ShelfEntry.findOne({
+        where: { bookId }, transaction, lock: transaction.LOCK.UPDATE,
+      })
+      if (!entry) throw new ApiError(API_ERRORS.SHELF_ENTRY_NOT_FOUND)
+      applyChanges(entry)
+      await entry.save({ transaction })
+      return entry.toJSON()
+    })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.updateShelfEntry')
+    throw error
+  }
+}
+
+export async function deleteShelfBook(bookId) {
+  try {
+    const { sequelize } = await import('../config/database.js')
+    const { Book, ShelfEntry } = await import('../models/index.js')
+    return await sequelize.transaction(async transaction => {
+      const removed = await ShelfEntry.destroy({ where: { bookId }, transaction })
+      if (!removed) throw new ApiError(API_ERRORS.SHELF_ENTRY_NOT_FOUND)
+      await Book.destroy({ where: { id: bookId }, transaction })
+      return { bookId, removed: true }
+    })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.deleteShelfBook')
+    throw error
+  }
+}

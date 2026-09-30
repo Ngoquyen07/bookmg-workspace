@@ -1,0 +1,55 @@
+# VS Code REST Client: run requests in order, one at a time.
+# Start BE: cd D:\bookmg-workspace\bookmg-repo-be ; npm.cmd run dev
+# After each write, rerun requests/readd-proof.sql in your MySQL client.
+# OL45804W is Fantastic Mr. Fox. Use a different valid work ID if it is
+# already on your shelf; do not delete an existing entry just for this demo.
+# The work ID in the SQL file must match this workId.
+
+@baseUrl = http://127.0.0.1:3000
+@workId = OL45804W
+
+### 1. Precondition: isInShelf must be false. If true, stop and choose another work ID.
+GET {{baseUrl}}/api/books/{{workId}}
+
+### 2. First add: expect 201. DB: books=1, shelf_entries=1.
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}"
+}
+
+### 3. Duplicate while still on shelf: expect 409 BOOK_ALREADY_IN_SHELF.
+### DB remains books=1, shelf_entries=1.
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}"
+}
+
+### 4. Remove from shelf: expect 200. DB: books=0, shelf_entries=0.
+DELETE {{baseUrl}}/api/shelf/{{workId}}
+
+### 5. Membership is now false; neither table has this work ID.
+GET {{baseUrl}}/api/books/{{workId}}
+
+### 6. Add again: expect 201, not 409. DB: new books=1, shelf_entries=1.
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}"
+}
+
+### 7. Duplicate again: expect 409. DB remains books=1, shelf_entries=1.
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}"
+}
+
+### Optional cleanup if the work was not on your shelf before step 1.
+### This removes rows from both tables.
+DELETE {{baseUrl}}/api/shelf/{{workId}}
