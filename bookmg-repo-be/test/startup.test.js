@@ -11,6 +11,8 @@ test('health and HTTP errors use JSON responses', async () => {
     .send('{').expect(400, { error: { code: 'INVALID_JSON', message: 'Invalid JSON body' } })
   await request(app).post('/missing').send({ value: 'x'.repeat(110_000) })
     .expect(413, { error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } })
+  await request(app).get('/api/books/covers/%ZZ')
+    .expect(400, { error: { code: 'VALIDATION_ERROR', message: 'Invalid request data' } })
 })
 
 test('server exits without listening when MySQL is unavailable', () => {
@@ -30,4 +32,22 @@ test('server exits without listening when MySQL is unavailable', () => {
   assert.match(result.stderr, /Backend startup failed/)
   assert.doesNotMatch(result.stdout, /Backend ready/)
   assert.doesNotMatch(result.stderr, /startup-test-secret/)
+})
+
+test('invalid database configuration is caught and logged during startup', () => {
+  for (const override of [{ DB_NAME: '' }, { DB_PORT: 'invalid' }]) {
+    const result = spawnSync(process.execPath, ['server.js'], {
+      cwd: new URL('../', import.meta.url),
+      env: { ...process.env, DB_NAME: 'test', DB_USER: 'test', ...override },
+      encoding: 'utf8', timeout: 10_000,
+    })
+    assert.ifError(result.error)
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Backend startup failed/)
+    assert.doesNotMatch(result.stdout, /Backend ready/)
+    assert.doesNotMatch(result.stderr, /UnhandledPromiseRejection/)
+    const entry = JSON.parse(result.stderr.trim().split('\n')[0])
+    assert.equal(entry.message, 'Backend startup failed')
+    assert.equal(entry.context.code, 'INTERNAL_SERVER_ERROR')
+  }
 })

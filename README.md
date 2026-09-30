@@ -78,7 +78,7 @@ Khi tạo model, import kết nối này và khai báo các cột bằng `DataTy
 `Model.destroy()` để thao tác dữ liệu qua ORM.
 Hướng dẫn: https://sequelize.org/docs/v6/core-concepts/model-basics/
 
-Đã có model và migration cho `books` và `shelf_entries`; server hiện tại vẫn chỉ có API health.
+Đã có model và migration cho `books` và `shelf_entries`, API health, tìm kiếm sách và proxy ảnh bìa.
 Lệnh `db:check` chỉ kiểm tra kết nối, không tạo hay sửa bảng.
 Git quản lý tại workspace;
 hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets.
@@ -154,10 +154,92 @@ Binary cover responses will use their image content type rather than this JSON e
 
 `constants/responseConstants.js` defines status codes and public errors;
 `constants/logConstants.js` defines log levels and operational messages.
-Controllers use `utils/apiResponse.js`. The final `middleware/errorHandler.js`
-maps parser errors and hides unexpected internal errors from clients.
-Book/shelf/Open Library errors are predefined for upcoming endpoints; those
-business endpoints have not been implemented yet.
+Controllers use explicit `try/catch` to log failures and send responses through
+`utils/apiResponse.js`. Expected application errors use `utils/apiError.js` and
+the predefined public descriptors; unexpected failures remain generic 500
+responses. `app.js` catches JSON parser errors before routing. There is no custom
+global error middleware. Service/repository operations must be awaited inside
+the controller's try block; add the same explicit boundary to each new controller.
+The adapter catches upstream errors and rethrows typed application errors.
+Startup also catches database configuration/import and connection errors; shutdown
+attempts database cleanup even if closing the HTTP listener fails.
+
+Services and repositories also catch failures at their operation boundaries,
+call `logger.logError(error, operation)`, then rethrow the same error. The helper
+records safe diagnostics at the first failing layer and avoids duplicate error
+records as that error crosses layers. HTTP completion logs still record the
+request path and status. Use the optional third argument for request context
+when the error originates in a controller or request parser.
+
+```js
+catch (error) {
+  logger.logError(error, 'bookController.searchBooks', req)
+  return sendError(res, error)
+}
+```
+
+`sendError` resolves typed application errors, parser errors and unexpected
+failures into the public response contract; it does not log or catch operations.
+
+## Book search API
+
+For manual testing in VS Code, install REST Client and open
+`bookmg-repo-be/requests/books.http`. Start the backend with `npm run dev`, then
+click **Send Request** above an individual request (or press `Ctrl+Alt+R`).
+Set the file's `baseUrl` to match the backend's `BASE_URL`; update `coverId` from
+a search response when testing covers. The file contains only read-only requests.
+
+The request flow is router → controller → service → Open Library adapter, with
+a repository read for shelf membership. No search or cover request creates books
+or shelf entries. Native Node.js `fetch` calls fixed upstream hosts with a
+10-second deadline, including response body consumption.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/books/search?q=Harry%20Potter&page=1&limit=20` | Search books and mark existing shelf entries |
+| GET | `/api/books/covers/15155833` | Proxy a medium JPEG cover through the backend |
+
+Search parameters: required nonblank `q` (up to 200 characters), optional `field`
+(`all`, `title`, or `author`; default `all`), `page` (1–10,000; default 1), and
+`limit` (1–50; default 20). Unknown parameters are rejected. `field=all` uses
+Open Library's general search; title/author modes use their respective fields.
+
+```json
+{
+  "data": [
+    {
+      "id": "OL82563W",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "authors": ["J. K. Rowling"],
+      "coverId": 15155833,
+      "coverUrl": "/api/books/covers/15155833",
+      "firstPublishYear": 1997,
+      "isInShelf": false
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 4063, "totalPages": 204 }
+}
+```
+
+The response above illustrates the format; search totals and metadata may change.
+Missing authors become `[]`; missing cover/year values become `null`.
+The frontend uses the returned relative `coverUrl`, with a local placeholder if
+it is null or the cover is unavailable. Successful covers have a one-day browser
+cache lifetime. No backend search cache or automatic retries are implemented.
+
+Invalid input returns 400 `VALIDATION_ERROR`, missing covers return 404
+`COVER_NOT_FOUND`, upstream HTTP/network/invalid-response failures return 502
+`OPEN_LIBRARY_ERROR`, and upstream deadlines return 504 `OPEN_LIBRARY_TIMEOUT`.
+Shelf lookup failures return 500 instead of reporting incorrect membership.
+The adapter identifies the application as `MiniReadingTracker/1.0`; a contact
+identifier and traffic controls remain to be configured before frequent use.
+See the official [search API](https://openlibrary.org/dev/docs/api/search),
+[covers API](https://openlibrary.org/dev/docs/api/covers), and
+[usage guidelines](https://openlibrary.org/developers/api).
+
+Run `npm test` in the backend for HTTP, normalization, validation and failure
+checks with mocked upstream responses and shelf reads. Book detail, edition/page
+lookup and shelf CRUD endpoints are not implemented yet.
 
 ## GitHub workflow
 

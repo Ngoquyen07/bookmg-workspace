@@ -1,9 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { OPEN_LIBRARY_URLS } from '../constants/openLibraryConstants.js'
 
 const output = new URL('../.tmp/open-library/', import.meta.url)
 const keyword = process.argv.slice(2).join(' ').trim() || 'Harry Potter'
-const url = new URL('https://openlibrary.org/search.json')
+const url = new URL(OPEN_LIBRARY_URLS.SEARCH)
 url.search = new URLSearchParams({ q: keyword, page: '1', limit: '5' }).toString()
 
 async function request(endpoint) {
@@ -49,7 +50,7 @@ try {
 
   const results = await Promise.allSettled([
     (async () => {
-      const endpoint = `https://openlibrary.org/works/${workId}.json`
+      const endpoint = `${OPEN_LIBRARY_URLS.WORKS}${workId}.json`
       const detail = await (await request(endpoint)).json()
       await saveJson('detail.json', detail)
       return { url: endpoint, file: 'detail.json', sampleShape: shape(detail) }
@@ -58,7 +59,7 @@ try {
       if (!Number.isInteger(book.cover_i) || book.cover_i <= 0) {
         return { skipped: 'Selected book has no valid cover_i' }
       }
-      const endpoint = `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg?default=false`
+      const endpoint = `${OPEN_LIBRARY_URLS.COVERS}${book.cover_i}-M.jpg?default=false`
       const response = await request(endpoint)
       const contentType = response.headers.get('content-type')?.split(';')[0]
       if (contentType !== 'image/jpeg') throw new Error(`Expected JPEG cover, received ${contentType}`)

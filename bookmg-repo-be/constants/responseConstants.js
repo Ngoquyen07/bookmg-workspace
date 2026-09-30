@@ -26,6 +26,9 @@ export const API_ERRORS = Object.freeze({
   BOOK_NOT_FOUND: Object.freeze({
     status: HTTP_STATUS.NOT_FOUND, code: 'BOOK_NOT_FOUND', message: 'Book not found',
   }),
+  COVER_NOT_FOUND: Object.freeze({
+    status: HTTP_STATUS.NOT_FOUND, code: 'COVER_NOT_FOUND', message: 'Cover not found',
+  }),
   BOOK_ALREADY_IN_SHELF: Object.freeze({
     status: HTTP_STATUS.CONFLICT, code: 'BOOK_ALREADY_IN_SHELF', message: 'Book is already in the shelf',
   }),
