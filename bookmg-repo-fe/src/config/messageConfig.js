@@ -10,7 +10,7 @@ export const API_ERROR_MESSAGES = {
 export const DEFAULT_API_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ. Vui lòng thử lại.'
 
 export const DASHBOARD_MESSAGES = {
-  title: 'Chặng đọc của bạn',
+  title: 'Hành trình của bạn',
   description: 'Tiếp nối những trang đang đọc và nhìn lại những cuốn đã hoàn thành.',
   loading: 'Đang tải tổng quan...',
   discover: 'Tìm sách mới',
