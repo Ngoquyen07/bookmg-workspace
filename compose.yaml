@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.0.44
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: bookmg
+      MYSQL_USER: bookmg
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build: ./bookmg-repo-be
+    environment: &backend_environment
+      BASE_URL: http://0.0.0.0:3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: bookmg
+      DB_USER: bookmg
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    command: ["npm", "run", "db:migrate"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  be:
+    build: ./bookmg-repo-be
+    restart: unless-stopped
+    environment: *backend_environment
+    volumes:
+      - backend_logs:/app/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  web:
+    build: ./bookmg-repo-fe
+    restart: unless-stopped
+    environment:
+      BOOKMG_DOMAIN: ${BOOKMG_DOMAIN:?Set BOOKMG_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      be:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  backend_logs:
+  caddy_data:
+  caddy_config:
