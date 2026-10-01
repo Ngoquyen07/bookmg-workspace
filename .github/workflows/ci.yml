@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build and API checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: http://127.0.0.1:5173
+      API_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            bookmg-repo-be/package-lock.json
+            bookmg-repo-fe/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: bookmg-repo-be
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: bookmg-repo-fe
+      - name: Build frontend
+        run: npm run build
+        working-directory: bookmg-repo-fe
+      - name: Check frontend-to-backend proxy
+        run: npm run check:api
+        working-directory: bookmg-repo-fe

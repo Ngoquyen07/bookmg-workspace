@@ -6,3 +6,6 @@ dist/
 *.log
 .idea/
 .serena/
+.playwright-mcp/
+/bookmg-repo-be/.tmp/
+/bookmg-repo-be/logs/

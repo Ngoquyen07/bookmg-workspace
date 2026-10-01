@@ -1,0 +1,44 @@
+# Manual API requests for the VS Code REST Client extension.
+# Start the backend with npm run dev from bookmg-repo-be.
+# Match baseUrl to BASE_URL in your backend .env.
+# Click Send Request above a request, or use Ctrl+Alt+R with the cursor inside it.
+# Replace coverId with a coverId returned by search before requesting a cover.
+
+@baseUrl = http://127.0.0.1:3000
+@coverId = 15155833
+@workId = OL82563W
+
+### Health — expected 200
+GET {{baseUrl}}/api/health
+
+### General search — expected 200 with data and pagination meta
+GET {{baseUrl}}/api/books/search?q=Harry%20Potter&page=1&limit=20
+
+### Next page
+GET {{baseUrl}}/api/books/search?q=Harry%20Potter&page=2&limit=20
+
+### Search by title
+GET {{baseUrl}}/api/books/search?q=Harry%20Potter&field=title&page=1&limit=20
+
+### Search by author
+GET {{baseUrl}}/api/books/search?q=J.%20K.%20Rowling&field=author&page=1&limit=20
+
+### Cover — JPEG if available; 404 COVER_NOT_FOUND if missing
+GET {{baseUrl}}/api/books/covers/{{coverId}}
+
+### Missing keyword — expected 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/books/search?page=1&limit=20
+
+### Invalid pagination — expected 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/books/search?q=Harry%20Potter&page=0
+
+### Inspect raw Open Library work details (manual diagnostic only)
+# Replace workId with an id from our search response, e.g. OL82563W.
+# Open Library search calls this field key, sometimes /works/OL82563W.
+# The frontend must use backend endpoints; this direct call is only for inspection.
+GET https://openlibrary.org/works/{{workId}}.json
+Accept: application/json
+User-Agent: MiniReadingTracker/1.0
+
+### Normalized book details through the backend; expected 200
+GET {{baseUrl}}/api/books/{{workId}}

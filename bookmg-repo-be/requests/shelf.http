@@ -1,0 +1,35 @@
+# Start the backend after running the migration against your configured database.
+# Replace workId/editionId with IDs returned by Open Library search/edition lookup.
+@baseUrl = http://127.0.0.1:3000
+@workId = OL82563W
+@editionId = OL62514708M
+
+### Add a work to the shelf; expected 201 (409 on repeat)
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}"
+}
+
+### Choose an edition with a known page count and start reading
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}",
+  "editionId": "{{editionId}}",
+  "status": "reading"
+}
+
+### First page of shelf entries, newest first (10 per page by default)
+GET {{baseUrl}}/api/shelf?page=1&limit=10
+
+### Second page of the reading tab (change page and status independently)
+GET {{baseUrl}}/api/shelf?status=reading&page=2&limit=10
+
+### One shelf entry for the book detail screen
+GET {{baseUrl}}/api/shelf/{{workId}}
+
+### Counts for the shelf dashboard
+GET {{baseUrl}}/api/shelf/stats

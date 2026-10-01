@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #f1f4f1;
+  --color-surface: #ffffff;
+  --color-ink: #162c29;
+  --color-muted: #526b66;
+  --color-line: #d4dfd9;
+  --color-moss: #146b5b;
+  --color-moss-dark: #0d5146;
+  --color-cover-stage: #dce6df;
+  --color-cover-empty: #d7dfd8;
+  --color-progress-track: #dce8e2;
+  --color-success-surface: #e2f2ed;
+  --color-danger: #a43830;
+  --color-danger-surface: #ffffff;
+  --font-display: 'Times New Roman', Georgia, serif;
+}
+
+html { scroll-behavior: smooth; }
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-paper: #101c1a;
+  --color-surface: #1c2b28;
+  --color-ink: #edf5ef;
+  --color-muted: #b1c6bd;
+  --color-line: #3a5049;
+  --color-moss: #75d0ac;
+  --color-moss-dark: #9ce0c3;
+  --color-cover-stage: #263b35;
+  --color-cover-empty: #3a5148;
+  --color-progress-track: #344b42;
+  --color-success-surface: #203d34;
+  --color-danger: #ffaaa2;
+  --color-danger-surface: #392826;
+}
+body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 3px solid #55b6a1; outline-offset: 3px; }
+.search-panel input:focus-visible, .search-panel > div > button:focus-visible { outline: none; }
+.search-panel input:-webkit-autofill,
+.search-panel input:-webkit-autofill:hover,
+.search-panel input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1000px var(--color-surface);
+}
+html[data-theme='dark'] .bg-moss { color: #10241d; }
+
+.book-shadow { box-shadow: 9px 12px 22px rgb(9 31 27 / 19%); }
+.shelf-spine { box-shadow: inset 4px 0 5px rgb(255 255 255 / 16%), inset -5px 0 8px rgb(0 0 0 / 19%), 7px 8px 12px rgb(0 0 0 / 18%); }
+.loading-spinner {
+  display: inline-block;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: loading-spin 0.7s linear infinite;
+}
+.loading-spinner-lg { width: 1.5rem; height: 1.5rem; border-width: 3px; }
+.screen-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: color-mix(in srgb, var(--color-paper) 85%, transparent);
+}
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .loading-spinner { animation: none; }
+}
