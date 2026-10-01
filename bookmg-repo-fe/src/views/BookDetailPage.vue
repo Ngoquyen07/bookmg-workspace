@@ -63,12 +63,12 @@ async function loadDetail() {
 }
 watch(() => route.params.workId, loadDetail, { immediate: true })
 
-async function add(status) {
+async function add() {
   if (!book.value) return
   adding.value = true
   error.value = ''
   try {
-    await shelfApi.add({ workId: book.value.id, status, ...(book.value.editionId ? { editionId: book.value.editionId } : {}) })
+    await shelfApi.add({ workId: book.value.id, ...(book.value.editionId ? { editionId: book.value.editionId } : {}) })
     book.value = { ...book.value, isInShelf: true }
     toast.success('Đã thêm sách vào tủ.')
     await loadShelfEntry(book.value.id)

@@ -12,13 +12,20 @@ Content-Type: application/json
   "workId": "{{workId}}"
 }
 
-### Choose an edition with a known page count and start reading
+### Choose an edition with a known page count; new books start as want-to-read
 POST {{baseUrl}}/api/shelf
 Content-Type: application/json
 
 {
   "workId": "{{workId}}",
-  "editionId": "{{editionId}}",
+  "editionId": "{{editionId}}"
+}
+
+### Start reading after adding
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
   "status": "reading"
 }
 

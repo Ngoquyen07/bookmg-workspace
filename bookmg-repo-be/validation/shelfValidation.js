@@ -5,7 +5,6 @@ import ApiError from '../utils/apiError.js'
 
 const addSchema = Joi.object({
   workId: Joi.string().pattern(/^OL\d+W$/).max(32).required(),
-  status: Joi.string().valid(...Object.values(READING_STATUS)).default(READING_STATUS.WANT_TO_READ),
   editionId: Joi.string().pattern(/^OL\d+M$/).max(32).optional(),
 })
 const listSchema = Joi.object({

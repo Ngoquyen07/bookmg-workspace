@@ -7,11 +7,10 @@ saving them to a MySQL shelf, and tracking reading status, progress, ratings, an
 - Backend health check: https://pentest-142.store/api/health (other API routes share this HTTPS origin)
 - Stack: Vue 3, Vue Router, Vite, Tailwind CSS, Axios; Node.js, Express, Sequelize, MySQL; Docker Compose and Caddy on an Ubuntu VPS.
 
-The screenshots below were captured from the local frontend and local MySQL-backed
+The screenshot below was captured from the local frontend and local MySQL-backed
 API on 2026-10-01.
 
 ![Book search](docs/screenshots/search-local.png)
-![Book detail with initial reading status](docs/screenshots/detail-local.png)
 
 The browser calls only the Express API. The API reads book metadata and covers from
 Open Library and persists the shelf in MySQL.
@@ -25,7 +24,7 @@ Open Library and persists the shelf in MySQL.
 | GET | `/api/shelf` | List and filter saved books |
 | GET | `/api/shelf/stats` | Get shelf counts |
 | GET | `/api/shelf/:bookId` | Get one saved book |
-| POST | `/api/shelf` | Add a book with its initial status |
+| POST | `/api/shelf` | Add a book (defaults to want-to-read) |
 | PATCH | `/api/shelf/:bookId` | Update progress, status, rating, or notes |
 | DELETE | `/api/shelf/:bookId` | Remove a book after client confirmation |
 
@@ -390,11 +389,11 @@ the add-to-shelf transaction against a temporary MySQL database.
 
 ## Add a book to the shelf
 
-`POST /api/shelf` accepts a work ID, optional initial status (`want_to_read`,
-`reading`, `finished`; default `want_to_read`) and optional edition ID:
+`POST /api/shelf` accepts a work ID and optional edition ID. New shelf entries
+always start as `want_to_read`; change status afterward with `PATCH /api/shelf/:bookId`:
 
 ```json
-{"workId":"OL82563W","editionId":"OL62514708M","status":"reading"}
+{"workId":"OL82563W","editionId":"OL62514708M"}
 ```
 
 The backend reads work metadata and author names from Open Library. If an edition

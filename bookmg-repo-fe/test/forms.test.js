@@ -4,12 +4,11 @@ import { mount } from '@vue/test-utils'
 import AddBookForm from '../src/modules/books/components/AddBookForm.vue'
 import ShelfUpdateForm from '../src/modules/shelf/components/ShelfUpdateForm.vue'
 
-test('the selected initial status is submitted when adding a book', async () => {
+test('a book outside the shelf has no status selector before adding', async () => {
   const form = mount(AddBookForm)
-  await form.find('#initial-reading-status').trigger('click')
-  await form.findAll('[role="menuitemradio"]').find(option => option.text().includes('Đang đọc')).trigger('click')
+  expect(form.find('#initial-reading-status').exists()).toBe(false)
   await form.find('form').trigger('submit')
-  expect(form.emitted('submit')?.[0]).toEqual(['reading'])
+  expect(form.emitted('submit')?.[0]).toEqual([])
 })
 
 test('clicking the selected star clears a saved rating', async () => {

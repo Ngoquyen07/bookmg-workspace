@@ -22,6 +22,9 @@ test('shelf list accepts bounded pagination and status filters', () => {
   }
 })
 
-test('adding a work without a status starts in want-to-read', () => {
-  assert.equal(validateAddBook({ workId: 'OL19721157W' }).status, 'want_to_read')
+test('adding a work does not accept an initial status', () => {
+  assert.deepEqual(validateAddBook({ workId: 'OL19721157W' }), { workId: 'OL19721157W' })
+  for (const status of ['want_to_read', 'reading', 'finished']) {
+    assert.throws(() => validateAddBook({ workId: 'OL19721157W', status }), error => error.descriptor === API_ERRORS.VALIDATION_ERROR)
+  }
 })
