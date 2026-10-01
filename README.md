@@ -1,5 +1,54 @@
 # Mini Reading Tracker
 
+## Deploy with Docker Compose
+
+This setup runs MySQL, the Express API, and a Caddy web server on one VPS. Only
+ports 80 and 443 are public. Caddy serves the built Vue app, routes `/api/*` to
+Express, and obtains HTTPS certificates for `BOOKMG_DOMAIN`. Point the domain's
+DNS at the VPS and allow inbound TCP 80/443 before starting it.
+
+On the VPS, from the workspace root:
+
+```sh
+cp deploy/env.example .env
+# Edit .env: set the real domain and two different random passwords.
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+curl -f https://YOUR_DOMAIN/api/health
+```
+
+Keep `.env` private; it is ignored by Git. `docker compose up` waits for MySQL,
+runs Sequelize migrations, then starts the API and web server. MySQL data, API
+log files, and Caddy certificates use separate named volumes. No database port
+or backend port is exposed publicly.
+
+The VPS at `/home/ubuntu/apps/bookmg` is a checkout of GitHub `main` with a
+read-only deploy key. Its systemd timer checks `main` about once a minute. For
+a new commit, `deploy/bookmg-sync.sh` fast-forwards the checkout, rebuilds the
+containers, and verifies MySQL, the API, and the frontend through local HTTPS.
+If verification fails, it restores the previous code and containers. Check the
+deployed commit and timer logs with:
+
+```sh
+cd /home/ubuntu/apps/bookmg
+git status --short --branch
+git rev-parse HEAD
+systemctl status bookmg-deploy.timer
+journalctl -u bookmg-deploy.service -n 80 --no-pager
+```
+
+Push updates through a PR into `main`; the VPS does not deploy task branches.
+Keep migrations backward compatible with the previous app version so code
+rollback remains possible. Back up the MySQL volume before schema changes or
+server replacement; `docker compose down -v` deletes data.
+
+The public frontend URL is `https://YOUR_DOMAIN/` and the backend health URL is
+`https://YOUR_DOMAIN/api/health`. Both share one origin, so the client uses its
+existing relative `/api` URLs. The current assignment is a shared single-user
+shelf: anyone with the URL can change its contents. Add at least one sample book
+after deployment so reviewers can inspect the shelf.
+
 Ứng dụng theo dõi sách gồm Vue + Vite và Node.js + Express, dùng JavaScript ES modules.
 Yêu cầu Node.js >= 22.12.0 và npm.
 

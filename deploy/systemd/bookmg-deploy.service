@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync BookMG from GitHub main and deploy with Docker Compose
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/apps/bookmg
+ExecStart=/bin/bash /home/ubuntu/apps/bookmg/deploy/bookmg-sync.sh
+TimeoutStartSec=900
+StandardOutput=journal
+StandardError=journal

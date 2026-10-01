@@ -1,0 +1,13 @@
+{$BOOKMG_DOMAIN} {
+    encode gzip
+
+    handle /api/* {
+        reverse_proxy be:3000
+    }
+
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}
