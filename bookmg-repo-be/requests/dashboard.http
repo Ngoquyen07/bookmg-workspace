@@ -1,0 +1,14 @@
+# Run the new migration before starting the local backend.
+@baseUrl = http://127.0.0.1:3000
+
+### Dashboard; 200 with stats and three sections with counts
+GET {{baseUrl}}/api/dashboard
+
+### Only the top two books per section; total remains the full matching count
+GET {{baseUrl}}/api/dashboard?limit=2
+
+### Invalid section limit; 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/dashboard?limit=7
+
+### Unknown filters are rejected; 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/dashboard?status=reading

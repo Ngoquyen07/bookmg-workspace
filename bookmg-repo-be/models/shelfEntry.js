@@ -38,6 +38,7 @@ const ShelfEntry = sequelize.define('ShelfEntry', {
   },
   startedAt: { type: DataTypes.DATEONLY, allowNull: true },
   finishedAt: { type: DataTypes.DATEONLY, allowNull: true },
+  lastProgressAt: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
 }, { tableName: 'shelf_entries', timestamps: true })
 
 export default ShelfEntry

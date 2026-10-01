@@ -18,6 +18,7 @@ Open Library and persists the shelf in MySQL.
 | Method | API path | Purpose |
 | --- | --- | --- |
 | GET | `/api/health` | Check backend availability |
+| GET | `/api/dashboard` | Get counts, active reading, nearly finished, and recently finished books |
 | GET | `/api/books/search` | Search books by title or author |
 | GET | `/api/books/:workId` | Get work details and suggested edition |
 | GET | `/api/books/covers/:coverId` | Proxy a cover image |
@@ -58,6 +59,7 @@ erDiagram
         string notes
         date startedAt
         date finishedAt
+        datetime lastProgressAt
     }
 ```
 
@@ -475,9 +477,48 @@ Once CI has run on GitHub, use that check when protecting `main`. Repository mer
 settings and branch protection must also be configured on GitHub; local workflow
 files alone do not enforce them.
 
+## Reading dashboard
+
+Dashboard is the new local homepage at `/`; discovery is at `/discover`. Old root
+search URLs keep their keyword/filter/page when redirected to discovery. Dashboard
+cards open the existing clean book-detail URLs. Section links open the correct
+shelf tab through router state, and detail back navigation preserves that state.
+
+The feature plan, response contract, business rules, component map, visual design,
+and acceptance checks are in [Reading dashboard](docs/features/reading-dashboard.md).
+
+Before running the updated backend locally:
+
+```powershell
+cd D:\bookmg-workspace\bookmg-repo-be
+npm.cmd run db:migrate
+```
+
+`GET /api/dashboard?limit=4` returns the normal `{ status: 200, data: ... }` envelope.
+`data` contains `stats`, `continueReading`, `nearlyFinished`, and `recentlyFinished`.
+Each list has `data` and `meta: { count, total, limit }`. The limit defaults to 4 and
+accepts integers from 1 to 6; unknown query parameters are rejected.
+
+Continue reading sorts reading books by the last change to their page progress,
+falling back to their start date or creation time. Editing a note/rating or saving
+the same page does not change `lastProgressAt`. Nearly finished contains reading
+books with a known positive total and an exact progress ratio from 80% up to,
+but excluding, 100%. Recently finished sorts by completion date. All filtering,
+sorting and counts happen in MySQL; no Open Library metadata calls are needed.
+Unknown page counts stay readable and are excluded from Nearly finished.
+
+Existing entries have no reconstructed progress timestamp; their historical
+`updatedAt` includes unrelated edits. The migration preserves null activity, and
+the next real page change sets it inside the existing shelf transaction. Manual
+local requests are in `bookmg-repo-be/requests/dashboard.http`. The isolated
+`npm run db:test` checks dashboard thresholds, limits, ordering, counts, activity,
+and reversible migrations. The feature is not deployed until merged into `main`.
+
 ## Assumptions, limitations, and possible improvements
 
 - The assignment has one shared shelf and no login. Anyone with the demo URL can edit it.
+- Initial status selection was intentionally removed by agreement: newly added books
+  always start as want-to-read; status can be changed after adding.
 - Page count belongs to an edition, not a work. The detail API suggests an edition
   from the first 50 results; if none has a valid page count, numerical progress
   stays unavailable. Search results may also lack covers or publication years.

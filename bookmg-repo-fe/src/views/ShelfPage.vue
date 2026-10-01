@@ -14,7 +14,8 @@ const tabs = [
   { value: 'reading', label: 'Đang đọc', count: 'reading' },
   { value: 'finished', label: 'Đã đọc', count: 'finished' },
 ]
-const status = shallowRef('want_to_read')
+const initialStatus = window.history.state?.shelfStatus
+const status = shallowRef(tabs.some(tab => tab.value === initialStatus) ? initialStatus : 'want_to_read')
 const pages = shallowRef({ want_to_read: 1, reading: 1, finished: 1 })
 const page = computed(() => pages.value[status.value])
 const entries = shallowRef([])
@@ -32,6 +33,7 @@ function changeStatus(next) {
   if (status.value === next) return
   resultsMinHeight.value = Math.max(0, window.innerHeight - results.value.getBoundingClientRect().top)
   status.value = next
+  window.history.replaceState({ ...window.history.state, shelfStatus: next }, '')
 }
 
 function changePage(next) {
@@ -86,7 +88,7 @@ async function remove() {
           <h1 class="font-display text-4xl font-bold tracking-tight sm:text-6xl">Tủ sách của tôi</h1>
           <p class="mt-3 text-muted">Mọi cuốn sách và chặng đường đọc của bạn ở một nơi.</p>
         </div>
-        <RouterLink to="/" class="rounded-lg bg-[#146b5b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d5146]">+ Tìm sách mới</RouterLink>
+        <RouterLink :to="{ name: 'search' }" class="rounded-lg bg-[#146b5b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0d5146]">+ Tìm sách mới</RouterLink>
       </div>
       <div class="mt-9 grid grid-cols-3 border-y border-line bg-surface">
         <div class="px-4 py-5 sm:px-8"><p class="text-xs text-muted sm:text-sm">Tổng số sách</p><p class="mt-1 font-display text-3xl font-bold sm:text-5xl">{{ stats.total }}</p></div>
@@ -104,7 +106,7 @@ async function remove() {
       <div v-else-if="!error && entries.length === 0" class="py-16 text-center">
         <p class="font-display text-2xl font-bold">Chưa có sách ở mục này</p>
         <p class="mt-2 text-muted">Tìm một cuốn sách để bắt đầu tủ sách của bạn.</p>
-        <RouterLink to="/" class="mt-5 inline-block rounded-lg bg-moss px-5 py-2.5 font-semibold text-white">Tìm sách</RouterLink>
+        <RouterLink :to="{ name: 'search' }" class="mt-5 inline-block rounded-lg bg-moss px-5 py-2.5 font-semibold text-white">Tìm sách</RouterLink>
       </div>
       <div v-else-if="!error" class="mt-7 grid gap-5 lg:grid-cols-2">
         <ShelfBookCard v-for="entry in entries" :key="entry.shelfEntry.id" :entry="entry" :busy="busyId === entry.book.id" @remove="removing = $event" />

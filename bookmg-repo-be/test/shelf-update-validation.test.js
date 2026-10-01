@@ -12,6 +12,7 @@ test('shelf update rejects invalid page and rating values at the API boundary', 
   }
   assert.deepEqual(validateShelfUpdate({ currentPage: 3, rating: 5 }), { currentPage: 3, rating: 5 })
   assert.deepEqual(validateShelfUpdate({ rating: null }), { rating: null })
+  assert.throws(() => validateShelfUpdate({ lastProgressAt: '2026-10-01T00:00:00Z' }), error => error.descriptor === API_ERRORS.VALIDATION_ERROR)
 })
 
 test('shelf list accepts bounded pagination and status filters', () => {

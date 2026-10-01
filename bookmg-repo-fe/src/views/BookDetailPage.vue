@@ -1,6 +1,6 @@
 <script setup>
 import { computed, shallowRef, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { booksApi } from '../modules/books/api/booksApi.js'
 import { shelfApi } from '../modules/shelf/api/shelfApi.js'
@@ -12,7 +12,8 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 const route = useRoute()
 const router = useRouter()
 const previousPath = window.history.state?.back
-const backTo = previousPath === '/' || previousPath?.startsWith('/?') || previousPath?.startsWith('/shelf') ? previousPath : '/'
+const hasPreviousPage = previousPath === '/' || previousPath?.startsWith('/discover') || previousPath?.startsWith('/shelf')
+const backTo = hasPreviousPage ? previousPath : '/discover'
 const backToShelf = backTo.startsWith('/shelf')
 if (Object.keys(route.query).length) router.replace({ name: 'book-detail', params: { workId: route.params.workId } })
 const toast = useToast()
@@ -27,6 +28,11 @@ const shelfEntry = shallowRef(null)
 const error = shallowRef('')
 const showAllSubjects = shallowRef(false)
 const visibleSubjects = computed(() => showAllSubjects.value ? book.value?.subjects ?? [] : book.value?.subjects?.slice(0, 12) ?? [])
+
+function goBack() {
+  if (hasPreviousPage) router.back()
+  else router.push(backTo)
+}
 
 let requestId = 0
 async function loadShelfEntry(workId) {
@@ -108,13 +114,13 @@ async function remove() {
   } finally {
     deleting.value = false
   }
-  router.push(backTo)
+  goBack()
 }
 </script>
 
 <template>
   <main class="mx-auto max-w-7xl px-5 py-9 sm:px-8">
-    <RouterLink :to="backTo" class="text-sm font-semibold text-moss hover:underline">{{ backToShelf ? '← Quay lại tủ sách' : '← Quay lại tìm kiếm' }}</RouterLink>
+    <button type="button" class="text-sm font-semibold text-moss hover:underline" @click="goBack">{{ backToShelf ? '← Quay lại tủ sách' : backTo === '/' ? '← Quay lại tổng quan' : '← Quay lại tìm kiếm' }}</button>
     <div v-if="loading" role="status" class="screen-loading text-muted"><span class="loading-spinner loading-spinner-lg" aria-hidden="true"></span>Đang tải chi tiết sách...</div>
     <div v-else-if="book" class="mt-8 grid gap-10 lg:grid-cols-[minmax(280px,390px)_minmax(0,1fr)] lg:gap-14">
       <div class="flex max-h-[380px] self-start items-center justify-center bg-cover-stage px-8 py-8"><BookCover :url="book.coverUrl" :title="book.title" class="w-full max-w-52" /></div>
