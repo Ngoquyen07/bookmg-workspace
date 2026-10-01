@@ -27,14 +27,21 @@ GET {{baseUrl}}/api/books/{{workId}}
 ### 4. Fetch its cover through the backend: 200 image/jpeg
 GET {{baseUrl}}/api/books/covers/{{coverId}}
 
-### 5. Add it as reading: first request 201; later requests 409
+### 5. Add it as want-to-read: first request 201; later requests 409
 ### This writes to MySQL.
 POST {{baseUrl}}/api/shelf
 Content-Type: application/json
 
 {
   "workId": "{{workId}}",
-  "editionId": "{{editionId}}",
+  "editionId": "{{editionId}}"
+}
+
+### 5a. Start reading: 200; startedAt is recorded
+PATCH {{baseUrl}}/api/shelf/{{workId}}
+Content-Type: application/json
+
+{
   "status": "reading"
 }
 
@@ -59,8 +66,7 @@ Content-Type: application/json
 
 {
   "workId": "{{workId}}",
-  "editionId": "{{editionId}}",
-  "status": "reading"
+  "editionId": "{{editionId}}"
 }
 
 ### 12. Record progress, rating, and notes: 200; currentPage 75

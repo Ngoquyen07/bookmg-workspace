@@ -6,6 +6,7 @@ import logger from './services/core/loggerService.js'
 import { sendSuccess, sendError } from './utils/apiResponse.js'
 import bookRouter from './routers/bookRouter.js'
 import shelfRouter from './routers/shelfRouter.js'
+import dashboardRouter from './routers/dashboardRouter.js'
 
 const app = express()
 
@@ -32,6 +33,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/books', bookRouter)
 app.use('/api/shelf', shelfRouter)
+app.use('/api/dashboard', dashboardRouter)
 
 app.use((_req, res) => {
   sendError(res, API_ERRORS.ROUTE_NOT_FOUND)

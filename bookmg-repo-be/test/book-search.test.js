@@ -66,6 +66,25 @@ test('title/author search forwards the right field and empty results skip MySQL'
   }
 })
 
+test('subject search quotes literal text and preserves normalized pagination', async t => {
+  const subject = 'Magic "school" \\ OR title:Potter'
+  const upstream = t.mock.method(globalThis, 'fetch', async url => {
+    assert.equal(url.searchParams.get('q'), 'subject:"Magic \\"school\\" \\\\ OR title:Potter"')
+    assert.equal(url.searchParams.has('subject'), false)
+    assert.equal(url.searchParams.get('page'), '2')
+    assert.equal(url.searchParams.get('limit'), '1')
+    return json({ numFound: 3, docs: [{ key: '/works/OL1W', title: 'Example', cover_i: 123 }] })
+  })
+  t.mock.method(ShelfEntry, 'findAll', async () => [])
+  t.mock.method(ShelfEntry, 'create', () => { throw new Error('Search must not write') })
+  const result = await request(app).get('/api/books/search').query({ q: subject, field: 'subject', page: 2, limit: 1 }).expect(200)
+  assert.equal(result.body.status, 200)
+  assert.equal(result.body.data[0].coverUrl, '/api/books/covers/123')
+  assert.equal(result.body.data[0].isInShelf, false)
+  assert.deepEqual(result.body.meta, { page: 2, limit: 1, count: 1, total: 3, totalPages: 3 })
+  assert.equal(upstream.mock.callCount(), 1)
+})
+
 test('invalid query and cover IDs are rejected before upstream calls', async t => {
   const upstream = t.mock.method(globalThis, 'fetch', () => { throw new Error('Invalid input must not reach upstream') })
   for (const query of [

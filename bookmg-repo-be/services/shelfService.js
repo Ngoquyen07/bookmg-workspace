@@ -5,31 +5,25 @@ import { READING_STATUS } from '../constants/bookConstants.js'
 import ApiError from '../utils/apiError.js'
 import logger from './core/loggerService.js'
 
-export async function addBook({ workId, status, editionId }) {
+export async function addBook({ workId, editionId }) {
   try {
     if ((await findShelfBookIds([workId])).has(workId)) throw new ApiError(API_ERRORS.BOOK_ALREADY_IN_SHELF)
     const book = await openLibrary.getWork(workId)
     const edition = editionId ? await openLibrary.getEdition(editionId, workId) : { editionId: null, totalPages: null }
-    const today = new Date().toISOString().slice(0, 10)
-    return await addBookToShelf(book, {
-      ...edition, status,
-      currentPage: status === READING_STATUS.FINISHED ? edition.totalPages ?? 0 : 0,
-      startedAt: status === READING_STATUS.READING ? today : null,
-      finishedAt: status === READING_STATUS.FINISHED ? today : null,
-    })
+    return await addBookToShelf(book, { ...edition, startedAt: null, finishedAt: null })
   } catch (error) {
     logger.logError(error, 'shelfService.addBook')
     throw error
   }
 }
 
-function formatShelfEntry(entry) {
+export function formatShelfEntry(entry) {
   const { book, ...shelfEntry } = entry.toJSON()
   return {
     book: { ...book, coverUrl: book.coverId === null ? null : `/api/books/covers/${book.coverId}` },
     shelfEntry,
-    progressPercent: shelfEntry.totalPages === null
-      ? null : Math.round(shelfEntry.currentPage / shelfEntry.totalPages * 100),
+    progressPercent: shelfEntry.totalPages > 0
+      ? Math.floor(shelfEntry.currentPage / shelfEntry.totalPages * 100) : null,
   }
 }
 
@@ -72,9 +66,11 @@ export async function getStats() {
 
 export async function updateBook(bookId, changes) {
   try {
-    const today = new Date().toISOString().slice(0, 10)
     return await updateShelfEntry(bookId, entry => {
+      const now = new Date()
+      const today = now.toISOString().slice(0, 10)
       const total = entry.totalPages
+      const previousPage = entry.currentPage
       if (total === null && changes.currentPage !== undefined) {
         throw new ApiError(API_ERRORS.VALIDATION_ERROR)
       }
@@ -103,6 +99,7 @@ export async function updateBook(bookId, changes) {
       }
       if (status !== READING_STATUS.FINISHED) entry.finishedAt = null
       entry.status = status
+      if (entry.currentPage !== previousPage) entry.lastProgressAt = now
     })
   } catch (error) {
     logger.logError(error, 'shelfService.updateBook')

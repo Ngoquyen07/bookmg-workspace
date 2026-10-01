@@ -4,7 +4,7 @@ import ApiError from '../utils/apiError.js'
 
 const searchSchema = Joi.object({
   q: Joi.string().trim().min(1).max(200).required(),
-  field: Joi.string().valid('all', 'title', 'author').default('all'),
+  field: Joi.string().valid('all', 'title', 'author', 'subject').default('all'),
   page: Joi.number().integer().min(1).max(10000).default(1),
   limit: Joi.number().integer().min(1).max(50).default(20),
 })

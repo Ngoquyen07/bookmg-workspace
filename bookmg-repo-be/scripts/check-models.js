@@ -59,6 +59,7 @@ try {
   assert.equal(stored.editionId, 'OL1M')
   assert.equal(stored.totalPages, 100)
   assert.equal(stored.rating, null)
+  assert.equal(stored.lastProgressAt, null)
   await assert.rejects(ShelfEntry.create({ bookId: book.id }), UniqueConstraintError)
   await assert.rejects(ShelfEntry.create({ bookId: 'OL999W' }), ForeignKeyConstraintError)
   await assert.rejects(Book.destroy({ where: { id: book.id } }), ForeignKeyConstraintError)
@@ -125,12 +126,20 @@ try {
     response = await api.post('/api/shelf').send({ workId: 'OL404W' })
     assert.equal(response.status, 404)
 
-    response = await api.post('/api/shelf').send({ workId: 'OL2W', editionId: 'OL2M', status: 'finished' })
+    response = await api.post('/api/shelf').send({ workId: 'OL2W', editionId: 'OL2M' })
     assert.equal(response.status, 201, JSON.stringify(response.body))
     assert.equal(response.body.status, response.status)
-    assert.equal(response.body.data.shelfEntry.currentPage, 250)
+    assert.equal(response.body.data.shelfEntry.status, 'want_to_read')
+    assert.equal(response.body.data.shelfEntry.currentPage, 0)
+    assert.equal(response.body.data.shelfEntry.startedAt, null)
+    assert.equal(response.body.data.shelfEntry.finishedAt, null)
     assert.equal(response.body.data.shelfEntry.totalPages, 250)
     assert.deepEqual(response.body.data.book.authors, ['Test Author'])
+    assert.equal((await api.post('/api/shelf').send({ workId: 'OL3W', status: 'reading' })).status, 400)
+    assert.equal(await Book.count({ where: { id: 'OL3W' } }), 0)
+    response = await api.patch('/api/shelf/OL2W').send({ status: 'finished' })
+    assert.equal(response.status, 200)
+    assert.equal(response.body.data.currentPage, 250)
     detail = await api.get('/api/books/OL2W')
     assert.equal(detail.body.data.isInShelf, true)
     assert.equal(detail.body.data.totalPages, 250)
@@ -200,10 +209,14 @@ try {
     assert.equal(response.status, 400)
 
     await ShelfEntry.destroy({ where: { bookId: 'OL2W' } })
-    response = await api.post('/api/shelf').send({ workId: 'OL2W', status: 'reading' })
+    response = await api.post('/api/shelf').send({ workId: 'OL2W' })
     assert.equal(response.status, 201)
     assert.equal(response.body.data.shelfEntry.totalPages, null)
-    assert.ok(response.body.data.shelfEntry.startedAt)
+    assert.equal(response.body.data.shelfEntry.status, 'want_to_read')
+    assert.equal(response.body.data.shelfEntry.startedAt, null)
+    response = await api.patch('/api/shelf/OL2W').send({ status: 'reading' })
+    assert.equal(response.status, 200)
+    assert.ok(response.body.data.startedAt)
     assert.equal(await Book.count({ where: { id: 'OL2W' } }), 1)
     response = await api.patch('/api/shelf/OL2W').send({ currentPage: 30 })
     assert.equal(response.status, 400)
@@ -259,13 +272,67 @@ try {
   assert.ok(await Book.findByPk(book.id))
   const emptyStats = await request(app).get('/api/shelf/stats')
   assert.deepEqual(emptyStats.body.data, { total: 0, wantToRead: 0, reading: 0, finished: 0 })
+
+  // Dashboard fixtures live only in this invocation's temporary database.
+  const api = request(app)
+  let dashboard = await api.get('/api/dashboard')
+  assert.equal(dashboard.status, 200)
+  assert.deepEqual(dashboard.body.data.stats, emptyStats.body.data)
+  for (const name of ['continueReading', 'nearlyFinished', 'recentlyFinished']) {
+    assert.deepEqual(dashboard.body.data[name], { data: [], meta: { count: 0, total: 0, limit: 4 } })
+  }
+  const fixtureIds = Array.from({ length: 8 }, (_, index) => `OL${index + 11}W`)
+  await Book.bulkCreate(fixtureIds.map(id => ({ id, title: `Dashboard ${id}` })))
+  const fixture = (id, status, currentPage, totalPages, date) => ({
+    bookId: `OL${id}W`, status, currentPage, totalPages,
+    lastProgressAt: date ? new Date(date) : null,
+  })
+  await ShelfEntry.bulkCreate([
+    fixture(11, 'reading', 79, 100, '2026-09-01'),
+    fixture(12, 'reading', 80, 100, '2026-09-02'),
+    fixture(13, 'reading', 999, 1000, '2026-09-03'),
+    { ...fixture(14, 'reading', 0, null, null), startedAt: '2026-09-04' },
+    fixture(15, 'reading', 80, 100, '2026-09-05'),
+    fixture(16, 'want_to_read', 95, 100, '2026-09-06'),
+    { ...fixture(17, 'finished', 100, 100, '2026-09-07'), finishedAt: '2026-09-25' },
+    { ...fixture(18, 'finished', 100, 100, '2026-09-08'), finishedAt: '2026-10-01' },
+  ])
+  dashboard = await api.get('/api/dashboard?limit=2')
+  assert.equal(dashboard.status, 200, JSON.stringify(dashboard.body))
+  assert.deepEqual(dashboard.body.data.stats, { total: 8, wantToRead: 1, reading: 5, finished: 2 })
+  const ids = list => list.data.map(item => item.book.id)
+  assert.deepEqual(ids(dashboard.body.data.continueReading), ['OL15W', 'OL14W'])
+  assert.deepEqual(dashboard.body.data.continueReading.meta, { count: 2, total: 5, limit: 2 })
+  assert.equal(dashboard.body.data.continueReading.data[1].progressPercent, null)
+  assert.deepEqual(ids(dashboard.body.data.nearlyFinished), ['OL13W', 'OL15W'])
+  assert.equal(dashboard.body.data.nearlyFinished.data[0].progressPercent, 99)
+  assert.deepEqual(dashboard.body.data.nearlyFinished.meta, { count: 2, total: 3, limit: 2 })
+  assert.deepEqual(ids(dashboard.body.data.recentlyFinished), ['OL18W', 'OL17W'])
+  assert.deepEqual(dashboard.body.data.recentlyFinished.meta, { count: 2, total: 2, limit: 2 })
+  dashboard = await api.get('/api/dashboard?limit=6')
+  assert.deepEqual(ids(dashboard.body.data.nearlyFinished), ['OL13W', 'OL15W', 'OL12W'])
+  assert.equal((await api.patch('/api/shelf/OL12W').send({ currentPage: 81 })).status, 200)
+  const activityBeforeEdit = (await ShelfEntry.findOne({ where: { bookId: 'OL12W' } })).lastProgressAt.getTime()
+  assert.ok(activityBeforeEdit)
+  assert.equal((await api.patch('/api/shelf/OL12W').send({ currentPage: 81, rating: 4, notes: 'Only a metadata edit' })).status, 200)
+  assert.equal((await ShelfEntry.findOne({ where: { bookId: 'OL12W' } })).lastProgressAt.getTime(), activityBeforeEdit)
+  dashboard = await api.get('/api/dashboard?limit=2')
+  assert.deepEqual(ids(dashboard.body.data.continueReading), ['OL12W', 'OL15W'])
+  assert.equal((await api.patch('/api/shelf/OL12W').send({ currentPage: 101 })).status, 400)
+  assert.equal((await ShelfEntry.findOne({ where: { bookId: 'OL12W' } })).lastProgressAt.getTime(), activityBeforeEdit)
+  assert.equal((await api.patch('/api/shelf/OL12W').send({ status: 'finished' })).status, 200)
+  const completed = await ShelfEntry.findOne({ where: { bookId: 'OL12W' } })
+  assert.equal(completed.currentPage, 100)
+  assert.ok(completed.lastProgressAt.getTime() >= activityBeforeEdit)
+  await ShelfEntry.destroy({ where: { bookId: fixtureIds } })
+  await Book.destroy({ where: { id: fixtureIds } })
   await database.close()
   database = undefined
 
   migrate('db:migrate:undo:all')
   const [tables] = await administrator.query(`SHOW TABLES FROM \`${databaseName}\``)
   assert.deepEqual(tables.map(row => Object.values(row)[0].toLowerCase()), ['sequelizemeta'])
-  console.log('MySQL checks OK: migration/backfill, shelf add/detail/list/update/delete/stats and rollback')
+  console.log('MySQL checks OK: migration/backfill, shelf CRUD, dashboard ordering/counts/activity and rollback')
 } catch (error) {
   console.error('MySQL schema checks failed:', error.original?.code ?? error.code ?? error.name)
   if (error.name === 'AssertionError') console.error(error.message)

@@ -12,6 +12,7 @@ test('shelf update rejects invalid page and rating values at the API boundary', 
   }
   assert.deepEqual(validateShelfUpdate({ currentPage: 3, rating: 5 }), { currentPage: 3, rating: 5 })
   assert.deepEqual(validateShelfUpdate({ rating: null }), { rating: null })
+  assert.throws(() => validateShelfUpdate({ lastProgressAt: '2026-10-01T00:00:00Z' }), error => error.descriptor === API_ERRORS.VALIDATION_ERROR)
 })
 
 test('shelf list accepts bounded pagination and status filters', () => {
@@ -22,6 +23,9 @@ test('shelf list accepts bounded pagination and status filters', () => {
   }
 })
 
-test('adding a work without a status starts in want-to-read', () => {
-  assert.equal(validateAddBook({ workId: 'OL19721157W' }).status, 'want_to_read')
+test('adding a work does not accept an initial status', () => {
+  assert.deepEqual(validateAddBook({ workId: 'OL19721157W' }), { workId: 'OL19721157W' })
+  for (const status of ['want_to_read', 'reading', 'finished']) {
+    assert.throws(() => validateAddBook({ workId: 'OL19721157W', status }), error => error.descriptor === API_ERRORS.VALIDATION_ERROR)
+  }
 })

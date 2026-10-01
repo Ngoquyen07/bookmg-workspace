@@ -1,0 +1,3 @@
+export const DASHBOARD_DEFAULT_LIMIT = 4
+export const DASHBOARD_MAX_LIMIT = 6
+export const NEARLY_FINISHED_RATIO = 0.8
