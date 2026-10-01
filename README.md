@@ -1,56 +1,221 @@
-# Mini Reading Tracker
+﻿# Mini Reading Tracker
 
-Mini Reading Tracker is a single-user app for finding books through Open Library,
-saving them to a MySQL shelf, and tracking reading status, progress, ratings, and notes.
+Ứng dụng dành cho một người dùng, hỗ trợ tìm sách từ Open Library, lưu vào tủ sách MySQL và theo dõi trạng thái, tiến độ, đánh giá, ghi chú. Ứng dụng theo dõi việc đọc; không cung cấp nội dung toàn văn để đọc sách trực tiếp.
 
-- Frontend demo: https://pentest-142.store/
-- Backend health check: https://pentest-142.store/api/health (other API routes share this HTTPS origin)
-- Stack: Vue 3, Vue Router, Vite, Tailwind CSS, Axios; Node.js, Express, Sequelize, MySQL; Docker Compose and Caddy on an Ubuntu VPS.
+- Mã nguồn: https://github.com/Ngoquyen07/bookmg-workspace — cần để công khai hoặc cấp quyền cho người chấm.
+- Giao diện public: https://pentest-142.store/
+- Địa chỉ gốc API public: https://pentest-142.store/api
+- Kiểm tra backend: https://pentest-142.store/api/health
+- Đề bài gốc: [Mini Reading Tracker — Bài test Fullstack](docs/README.reading-tracker.pdf).
 
-The screenshot below was captured from the local frontend and local MySQL-backed
-API on 2026-10-01.
+README mô tả mã nguồn hiện tại trên `develop`. VPS được cấu hình đồng bộ từ `main`; tính năng trên `develop` chỉ xuất hiện ở bản public sau khi được tích hợp vào `main` và triển khai thành công. Kiểm tra local không xác nhận phiên bản đang chạy trên VPS, dữ liệu mẫu public hay thời gian hoạt động liên tục.
 
-![Book search](docs/screenshots/search-local.png)
+Ảnh màn tìm kiếm dưới đây được chụp từ ứng dụng local ngày 01/10/2026:
 
-The browser calls only the Express API. The API reads book metadata and covers from
-Open Library and persists the shelf in MySQL.
+![Giao diện tìm kiếm sách](docs/screenshots/search-local.png)
 
-| Method | API path | Purpose |
-| --- | --- | --- |
-| GET | `/api/health` | Check backend availability |
-| GET | `/api/dashboard` | Get counts, active reading, nearly finished, and recently finished books |
-| GET | `/api/books/search` | Search books by title, author, or subject |
-| GET | `/api/books/:workId` | Get work details and suggested edition |
-| GET | `/api/books/covers/:coverId` | Proxy a cover image |
-| GET | `/api/shelf` | List and filter saved books |
-| GET | `/api/shelf/stats` | Get shelf counts |
-| GET | `/api/shelf/:bookId` | Get one saved book |
-| POST | `/api/shelf` | Add a book (defaults to want-to-read) |
-| PATCH | `/api/shelf/:bookId` | Update progress, status, rating, or notes |
-| DELETE | `/api/shelf/:bookId` | Remove a book after client confirmation |
+## Công nghệ sử dụng
+
+| Thành phần | Công nghệ đang sử dụng |
+| --- | --- |
+| Giao diện | Vue 3, Vue Router, Vite, Tailwind CSS 4, Axios, Vue Toastification |
+| Backend | Node.js 22, Express 5, Joi, dotenv, HTTP `fetch` có sẵn trong Node.js |
+| Cơ sở dữ liệu | MySQL 8, Sequelize 6, mysql2, Sequelize CLI và migration |
+| Kiểm thử | Node test runner, Supertest, Vitest, Vue Test Utils; kiểm tra trình duyệt bằng Playwright |
+| Triển khai | Docker Compose, Caddy, Ubuntu VPS, bộ hẹn giờ systemd |
+| Quản lý mã nguồn | Git, GitHub; GitHub Actions kiểm tra build và kết nối FE → BE |
+
+Dự án dùng JavaScript ES modules. Một số thư viện đã được cài nhưng không đồng nghĩa tính năng tương ứng đã triển khai: hiện không có đăng nhập/JWT, phân quyền hay quản lý tủ sách theo tài khoản.
+
+## Đối chiếu với yêu cầu đề bài
+
+| Yêu cầu | Kết quả hiện tại |
+| --- | --- |
+| Frontend Vue.js, backend Node.js, database MySQL | Đã có; thao tác SQL thông qua Sequelize |
+| Tìm theo tên sách hoặc tác giả | Đã có ở `/discover`, kết quả mặc định 20 sách/trang |
+| Hiển thị bìa, tên, tác giả, năm xuất bản; phân trang | Đã có; thiếu dữ liệu thì hiển thị thông tin thay thế |
+| Thêm từ kết quả, đánh dấu sách đã có trong tủ | Đã có; kiểm tra từ MySQL, thêm trùng trả 409 |
+| Trạng thái đang tải, không có kết quả và lỗi | Đã có vòng tải, thông báo và nút thử lại |
+| Chi tiết bìa, tên, tác giả, mô tả, số trang, chủ đề, năm xuất bản | Đã có khi nguồn dữ liệu cung cấp; số trang thuộc một phiên bản xuất bản |
+| Chọn trạng thái ban đầu khi thêm | **Đã bỏ theo quyết định trong quá trình phát triển:** luôn thêm với trạng thái Muốn đọc |
+| Ba tab Muốn đọc / Đang đọc / Đã đọc | Đã có, phân trang theo từng tab |
+| Thống kê tổng sách, đang đọc, đã đọc | Đã có phía trên tủ sách |
+| Tiến độ, cập nhật trang, đổi trạng thái, đánh giá 1–5 sao, ghi chú | Đã có; form cập nhật nằm ở chi tiết sách, thẻ trong tủ hiển thị dữ liệu và dẫn tới form |
+| Xóa có xác nhận | Đã có ở tủ sách và chi tiết |
+| Không cần đăng nhập, ứng dụng một người dùng | Đã có một tủ sách dùng chung, không có tài khoản |
+| FE không gọi trực tiếp Open Library | Các request dữ liệu và ảnh đều đi qua BE |
+| Validate BE, phản hồi lỗi thống nhất, ngày đọc và tự hoàn thành | Đã có; cập nhật liên quan thực hiện trong transaction |
+| Deploy FE, BE, MySQL và HTTPS | Đã có cấu hình VPS/Docker/Caddy và đồng bộ `main`; MySQL chỉ truy cập trong mạng nội bộ |
+| Có dữ liệu mẫu, hoạt động ít nhất 7 ngày sau nộp | Cần kiểm tra dữ liệu và vận hành bản public trước/sau nộp; chưa có lệnh tạo dữ liệu mẫu tự động |
+
+### Những điểm khác cách tổ chức trong đề
+
+Đề mô tả ba màn hình, trong đó tìm kiếm là trang chủ. Phiên bản hiện tại có bốn trang: tổng quan `/`, tìm kiếm `/discover`, chi tiết `/books/:workId`, tủ sách `/shelf`. Link tìm kiếm cũ ở `/` vẫn được chuyển tới `/discover`, giữ từ khóa và trang.
+
+Đề cho chọn trạng thái ngay khi thêm. Cả FE và BE hiện chỉ cho thêm với `want_to_read`; sau khi thêm mới đổi trạng thái ở chi tiết. Đây là yêu cầu gốc đã chủ động bỏ, không phải tính năng đã hoàn thành đúng như đề.
+
+Các thao tác cập nhật tiến độ, trạng thái, đánh giá và ghi chú được tập trung trong chi tiết. Tủ sách hiển thị tiến độ, đánh giá, ghi chú và nút đi tới chi tiết; không có form sửa trực tiếp trên từng thẻ. Các khác biệt này cần được trình bày với người chấm.
+
+### Tính năng bổ sung ngoài yêu cầu tối thiểu
+
+| Tính năng | Hành vi và phạm vi |
+| --- | --- |
+| Trang tổng quan | Bốn số thống kê và ba nhóm Tiếp tục đọc, Sắp đọc xong, Vừa hoàn thành |
+| Tiếp tục đọc | Chỉ sách Đang đọc; ưu tiên lần thay đổi số trang gần nhất, sau đó dùng ngày bắt đầu/ngày thêm khi chưa có lịch sử |
+| Sắp đọc xong | Sách Đang đọc có số trang xác định, tiến độ từ 80% đến dưới 100%; ưu tiên tiến độ cao nhất |
+| Vừa hoàn thành | Sách Đã đọc, sắp theo ngày hoàn thành gần nhất |
+| Giới hạn tổng quan | Mỗi nhóm mặc định tối đa 4 sách, API cho phép 1–6; số thống kê và tổng khớp điều kiện không bị giới hạn. Mở tủ sách để xem đầy đủ |
+| Tìm theo chủ đề | Chọn Chủ đề trong tìm kiếm hoặc click chủ đề ở chi tiết; tìm toàn bộ Open Library, không tìm riêng trong tủ |
+| Click tác giả | Mỗi tên tác giả ở chi tiết dẫn tới tìm kiếm theo tác giả; nhiều tác giả có link riêng |
+| Phân trang tủ sách | Mặc định 10 sách/trang theo trạng thái; đổi trang cuộn về đầu trang |
+| Giao diện sáng/tối | Lưu lựa chọn trên trình duyệt; logo và favicon dùng biểu tượng sách |
+| Thông báo thao tác | Thông báo khi thêm, cập nhật, xóa; lỗi thao tác cũng có thông báo |
+| Quản lý thay đổi form | Lưu chỉ được bật khi dữ liệu thay đổi; Hủy khôi phục dữ liệu ban đầu; lỗi nhập liệu nằm dưới trường tương ứng |
+| Xóa từ chi tiết | Có hộp xác nhận; thành công quay về màn trước đó |
+| Điều hướng | Giữ từ khóa/trang tìm kiếm và tab tủ sách khi quay lại; URL chi tiết không cần tham số chỉ nguồn truy cập |
+| Đồng bộ triển khai | VPS kiểm tra `main` định kỳ; nhánh phát triển không tự triển khai |
+
+Tổng quan và tìm theo chủ đề dùng API hiện có/SQL có giới hạn, không thêm bảng tài khoản hoặc bảng dashboard. `lastProgressAt` chỉ thay đổi khi số trang thực sự thay đổi; sửa đánh giá/ghi chú không làm sách nhảy lên đầu nhóm Tiếp tục đọc. Đây không phải nhật ký đọc từng ngày.
+
+Tài liệu thiết kế kỹ thuật bằng tiếng Anh được giữ riêng: [tổng quan](docs/features/reading-dashboard.md), [tìm theo chủ đề và tác giả](docs/features/subject-search.md).
+
+## Chạy trên máy local
+
+Cần Node.js >= 22.12.0, npm, Git và MySQL >= 8.0.16 đang chạy. MySQL từ phiên bản này thực thi các ràng buộc CHECK dùng trong migration.
+
+```powershell
+git clone https://github.com/Ngoquyen07/bookmg-workspace.git
+cd bookmg-workspace
+git switch develop
+```
+
+Tạo database bằng MySQL Shell ở chế độ SQL, Workbench hoặc công cụ SQL khác. Tài khoản chạy lệnh cần quyền tạo database:
+
+```sql
+CREATE DATABASE IF NOT EXISTS bookmg
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Mở hai terminal tại thư mục vừa clone. Không ghi đè `.env` đã cấu hình.
+
+### Backend
+
+```powershell
+cd bookmg-repo-be
+npm ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+Sửa `bookmg-repo-be/.env` bằng thông tin MySQL của máy:
+
+```dotenv
+BASE_URL=http://127.0.0.1:3000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=bookmg
+DB_USER=root
+DB_PASSWORD=mat_khau_mysql_cua_ban
+```
+
+Sau đó kiểm tra kết nối, chạy migration rồi khởi động:
+
+```powershell
+npm run db:check
+npm run db:migrate
+npm run db:migrate:status
+npm run dev
+```
+
+Backend mặc định chạy tại http://127.0.0.1:3000. `/api/health` trả `{"status":200,"data":{"status":"ok"}}`. Lệnh `db:check` chỉ xác nhận kết nối; không thay thế kiểm thử nghiệp vụ. Chạy server local không tự tạo database hoặc tự chạy migration.
+
+### Frontend
+
+```powershell
+cd bookmg-repo-fe
+npm ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+npm run dev
+```
+
+Cấu hình mặc định trong `bookmg-repo-fe/.env`:
+
+```dotenv
+BASE_URL=http://127.0.0.1:5173
+API_BASE_URL=http://127.0.0.1:3000
+```
+
+Mở http://127.0.0.1:5173. `API_BASE_URL` phải trỏ tới `BASE_URL` của backend. Vite chuyển request `/api` tới BE trong môi trường dev; trình duyệt vẫn gọi đường dẫn tương đối bằng Axios. Sau khi sửa `.env`, khởi động lại server tương ứng. Open Library không yêu cầu API key.
+
+### Build và chạy thông thường
+
+- Trong FE, `npm run build` tạo `dist/`; `npm run preview` xem bản build nhưng không có cấu hình proxy `/api` như dev. Dùng `npm run dev` để kiểm tra ứng dụng tích hợp local hoặc phục vụ bản build qua Caddy.
+- Trong BE, `npm start` chạy server không bật chế độ theo dõi thay đổi.
+- Trong FE, `npm run check:api` kiểm tra proxy với hai cổng thử nghiệm 15173 và 13000.
+- `.env`, `node_modules`, bản build và log không được commit. Hai thư mục FE/BE thuộc cùng một repository Git tại workspace.
+
+## Kiến trúc và luồng xử lý
 
 ```mermaid
 flowchart LR
-    Browser[Vue frontend] -->|/api| Express[Express backend]
-    Express -->|book search, details, covers| OpenLibrary[Open Library]
+    Browser[Trình duyệt Vue] -->|/api| Express[Backend Express]
+    Express -->|Tìm kiếm, chi tiết, ảnh| OpenLibrary[Open Library]
     Express -->|Sequelize| MySQL[(MySQL)]
 ```
 
+### Frontend
+
+| Thư mục/tệp | Trách nhiệm |
+| --- | --- |
+| `src/views` | Bốn trang chính: tổng quan, khám phá, chi tiết, tủ sách |
+| `src/modules/books` | API sách, form tìm/thêm sách, thẻ sách, kiểm tra đầu vào |
+| `src/modules/shelf` | API tủ sách, thẻ trong tủ, form cập nhật, kiểm tra đầu vào |
+| `src/modules/dashboard` | API tổng quan, composable tải dữ liệu, thống kê và các nhóm sách |
+| `src/components` | Thành phần dùng chung: header, bìa sách, phân trang, lựa chọn, hộp xác nhận |
+| `src/services/api.js` | Axios client chung, xử lý phản hồi/lỗi API |
+| `src/config/messageConfig.js` | Thông báo lỗi API và cấu hình nội dung tổng quan |
+| `src/router` | Route, chuyển hướng và cuộn trang |
+
+Luồng gọi dữ liệu: trang → API của module → Axios chung → `/api` → BE. Component nhận dữ liệu qua props và phát sự kiện cho thao tác người dùng. Tìm kiếm giữ từ khóa, chế độ và trang trong URL; tab tủ sách dùng trạng thái điều hướng. Không cần tài khoản hoặc kho trạng thái toàn cục cho phạm vi hiện tại.
+
+### Backend
+
+Luồng chính: router → controller → service → repository → Sequelize/MySQL. Với dữ liệu Open Library, service gọi adapter thay vì repository SQL.
+
+| Thư mục/tệp | Trách nhiệm |
+| --- | --- |
+| `app.js` | Cấu hình Express, phân tích request, gắn route và xử lý lỗi HTTP |
+| `server.js` | Kiểm tra kết nối MySQL trước khi mở cổng, quản lý khởi động/tắt server |
+| `config` | dotenv và kết nối Sequelize dùng chung |
+| `routers`, `controllers` | Định tuyến, validate, gọi service và trả HTTP response |
+| `services` | Quy tắc nghiệp vụ, chuẩn hóa dữ liệu, điều phối thao tác |
+| `repositories` | Query ORM, transaction và khóa bản ghi |
+| `adapters/openLibraryAdapter.js` | Gọi API nguồn, timeout và chuẩn hóa metadata |
+| `models`, `migrations` | Khai báo thực thể/quan hệ và thay đổi schema có phiên bản |
+| `constants`, `validation`, `utils` | Hằng số, Joi, lỗi ứng dụng và hàm trả response |
+| `services/core` | Ghi log |
+| `requests`, `test`, `scripts` | Ví dụ HTTP và các kiểm tra chạy được |
+
+`config/env.js` đọc `.env` của BE không phụ thuộc thư mục terminal, giữ ưu tiên cho biến môi trường đã được cấp từ hệ điều hành/container. Không dùng `sync({ force: true })` khi khởi động.
+
+## Thiết kế cơ sở dữ liệu
+
 ```mermaid
 erDiagram
-    BOOKS ||--o| SHELF_ENTRIES : "has"
+    BOOKS ||--o| SHELF_ENTRIES : "co ban ghi trong tu"
     BOOKS {
-        string id PK "Open Library work ID"
+        string id PK "Ma tac pham Open Library"
         string title
         json authors
         int coverId
         int firstPublishYear
         text description
         json subjects
+        datetime createdAt
+        datetime updatedAt
     }
     SHELF_ENTRIES {
         int id PK
-        string bookId FK "UNIQUE"
+        string bookId FK "Duy nhat"
         string status
         int currentPage
         string editionId
@@ -60,38 +225,179 @@ erDiagram
         date startedAt
         date finishedAt
         datetime lastProgressAt
+        datetime createdAt
+        datetime updatedAt
     }
 ```
 
-## Deploy with Docker Compose
+`books` lưu thông tin tác phẩm: mã `OL...W`, tên, tác giả, bìa, năm xuất bản lần đầu, mô tả và chủ đề. Tác giả/chủ đề là mảng JSON, không có bảng tác giả riêng.
 
-This setup runs MySQL, the Express API, and a Caddy web server on one VPS. Only
-ports 80 and 443 are public. Caddy serves the built Vue app, routes `/api/*` to
-Express, and obtains HTTPS certificates for `BOOKMG_DOMAIN`. Point the domain's
-DNS at the VPS and allow inbound TCP 80/443 before starting it.
+`shelf_entries` lưu việc thêm vào tủ và trạng thái đọc. `bookId` là khóa ngoại duy nhất: một tác phẩm có tối đa một bản ghi trong tủ dùng chung. `editionId` (`OL...M`) và `totalPages` đặt ở đây vì số trang thuộc phiên bản được chọn. Số trang không rõ là `null`, không dùng 0. Ghi chú tối đa 1.000 ký tự; đánh giá là số nguyên 1–5 hoặc `null`.
 
-On the VPS, from the workspace root:
+Quan hệ được đăng ký qua `models/index.js`. Khóa ngoại ngăn xóa sách khi bản ghi tủ vẫn tồn tại. Thêm lưu hai bảng trong một transaction; xóa lần lượt bản ghi tủ và sách trong một transaction; lỗi ở một bước sẽ rollback cả thao tác. Thêm lại sau khi xóa tạo lại dữ liệu ở cả hai bảng. Tìm kiếm hoặc xem chi tiết không tạo bản ghi sách.
+
+Migration lưu lịch sử schema và được chạy qua `npm run db:migrate`; `npm run db:migrate:status` xem trạng thái. Ngoài hai bảng nghiệp vụ, Sequelize CLI dùng bảng `SequelizeMeta` để ghi migration đã áp dụng. Khi thêm cột/bảng, tạo migration mới, cập nhật model liên quan và chạy migration, không sửa lịch sử đã chạy để đồng bộ một cách ngầm định.
+
+## API và quy tắc nghiệp vụ
+
+### Danh sách endpoint
+
+| Phương thức | Đường dẫn | Chức năng |
+| --- | --- | --- |
+| GET | `/api/health` | Kiểm tra backend đang trả lời |
+| GET | `/api/dashboard` | Thống kê và ba nhóm sách tổng quan |
+| GET | `/api/books/search` | Tìm sách theo tất cả, tên, tác giả hoặc chủ đề |
+| GET | `/api/books/:workId` | Chi tiết tác phẩm và phiên bản gợi ý |
+| GET | `/api/books/covers/:coverId` | Trả ảnh bìa JPEG thông qua BE |
+| GET | `/api/shelf` | Xem tủ sách, lọc và phân trang |
+| GET | `/api/shelf/stats` | Đếm sách theo trạng thái |
+| GET | `/api/shelf/:bookId` | Xem một sách đã lưu |
+| POST | `/api/shelf` | Thêm vào tủ với trạng thái Muốn đọc |
+| PATCH | `/api/shelf/:bookId` | Cập nhật tiến độ, trạng thái, đánh giá, ghi chú |
+| DELETE | `/api/shelf/:bookId` | Xóa khỏi tủ và xóa thông tin sách |
+
+### Định dạng phản hồi
+
+JSON thành công dùng `status` và `data`; danh sách thêm `meta`. Lỗi có mã ổn định trong `error.code` và thông báo trong `error.message`. `status` dạng số khớp mã HTTP; ảnh bìa là JPEG nên chỉ có HTTP status, không bọc JSON.
+
+```json
+{
+  "status": 200,
+  "data": [],
+  "meta": { "page": 1, "limit": 20, "count": 0, "total": 0, "totalPages": 0 }
+}
+```
+
+`count` là số phần tử trả về, `total` là tổng số khớp điều kiện, `totalPages` là số trang. Ví dụ trên là kết quả tìm kiếm rỗng.
+
+```json
+{
+  "status": 400,
+  "error": { "code": "VALIDATION_ERROR", "message": "Thông báo lỗi của API" }
+}
+```
+
+Các mã HTTP chính: 200 đọc/cập nhật/xóa, 201 thêm thành công, 400 dữ liệu sai, 404 không tìm thấy, 409 sách đã có trong tủ, 500 lỗi nội bộ, 502 lỗi dữ liệu/kết nối Open Library, 504 nguồn phản hồi quá thời hạn.
+
+### Tìm kiếm và chi tiết
+
+`GET /api/books/search?q=Harry%20Potter&field=all&page=1&limit=20`:
+
+- `q`: bắt buộc, sau bỏ khoảng trắng đầu/cuối dài 1–200 ký tự.
+- `field`: `all`, `title`, `author`, `subject`; mặc định `all`.
+- `page`: số nguyên 1–10.000; mặc định 1.
+- `limit`: số nguyên 1–50; mặc định 20.
+
+Mỗi kết quả có `id`, `title`, `authors`, `coverId`, `coverUrl`, `firstPublishYear`, `isInShelf`. Tác giả thiếu thành `[]`, bìa/năm thiếu thành `null`. Mã tác phẩm lấy từ `key` của Open Library; `coverId` chỉ nhận diện ảnh, không phải mã tác phẩm. Thông tin đã thêm được kiểm tra trong một lượt đọc MySQL cho danh sách kết quả.
+
+Tìm chủ đề dùng biểu thức `subject:"..."` qua Search API, xử lý dấu nháy và dấu gạch chéo ngược trước khi mã hóa URL. Click chủ đề hoặc tác giả ở chi tiết mở tìm kiếm tương ứng, trang 1; đổi trang giữ chế độ đó. Kết quả phụ thuộc cách Open Library lập chỉ mục, không cam kết khớp chính xác toàn bộ hệ thống phân loại chủ đề.
+
+`GET /api/books/:workId` đọc metadata tác phẩm từ Open Library. Nếu đã lưu vào tủ, mã phiên bản và số trang lấy từ bản ghi tủ; nếu chưa, BE xem 50 phiên bản đầu và gợi ý phiên bản đầu có số trang hợp lệ. Không tìm thấy thì cả `editionId`/`totalPages` là `null`. Năm ở search và năm trong tác phẩm có thể khác nhau vì nguồn trả metadata khác nhau.
+
+BE gọi thêm API tác giả, phiên bản hoặc danh sách phiên bản khi cần lấy tên tác giả/số trang. FE không gọi trực tiếp các API này. Request nguồn có thời hạn 10 giây, kể cả lúc đọc nội dung response. Ảnh trả qua `/api/books/covers/:coverId` và được cache trình duyệt một ngày; lỗi ảnh có hình thay thế trên FE. Chưa có cache kết quả search phía BE hoặc tự thử lại request nguồn.
+
+### Thêm và đọc tủ sách
+
+Ví dụ body `POST /api/shelf`:
+
+```json
+{"workId":"OL82563W","editionId":"OL62514708M"}
+```
+
+`workId` bắt buộc; `editionId` tùy chọn và phải thuộc tác phẩm. Không gửi phiên bản thì số trang lưu là `null`. FE hiện lấy phiên bản gợi ý từ chi tiết trước khi thêm. BE lấy metadata trước khi bắt đầu transaction, sau đó lưu sách và bản ghi tủ; kết quả 201 có `data.book`/`data.shelfEntry`. Thêm trùng trả 409. Không nhận trạng thái ban đầu từ request.
+
+`GET /api/shelf?status=reading&page=1&limit=10` trả sách mới thêm trước. `status` có thể bỏ qua hoặc là `want_to_read`, `reading`, `finished`; `page` 1–10.000; `limit` 1–50, mặc định 10. Mỗi phần tử gồm `book`, `shelfEntry`, `progressPercent`. Phần trăm dùng phần nguyên xuống: 99,9% hiển thị 99%; không rõ tổng trang thì trả `null`. `GET /api/shelf/:bookId` dùng cùng cấu trúc cho một sách, không có thì 404.
+
+`GET /api/shelf/stats` trả `total`, `wantToRead`, `reading`, `finished`. Các API đọc tủ/thống kê chỉ dùng MySQL, không cần metadata từ Open Library. Tham số không được hỗ trợ bị từ chối với 400.
+
+### Cập nhật, ngày đọc và xóa
+
+`PATCH /api/shelf/:bookId` nhận ít nhất một trường:
+
+| Trường | Giá trị được nhận |
+| --- | --- |
+| `currentPage` | Số nguyên từ 0 đến tổng trang đã biết |
+| `status` | `want_to_read`, `reading`, `finished` |
+| `rating` | Số nguyên 1–5 hoặc `null` để bỏ đánh giá |
+| `notes` | Chuỗi tối đa 1.000 ký tự, hoặc `null` để xóa ghi chú |
+
+BE không nhận trường ngoài danh sách; body rỗng hoặc sai kiểu trả 400. FE hiển thị lỗi nhập liệu tại trường; BE vẫn kiểm soát lại mọi request. Tổng trang chưa biết thì FE vô hiệu hóa nhập trang, BE từ chối cập nhật `currentPage`; vẫn đổi trạng thái, đánh giá, ghi chú được.
+
+Trang lớn hơn 0 nhưng chưa hết sách tự chuyển sang Đang đọc; bằng tổng trang tự chuyển Đã đọc. Chọn Đã đọc không kèm trang sẽ đặt trang bằng tổng nếu đã biết; gửi kèm trang thấp hơn tổng trả 400. Giảm trang của sách đã hoàn thành có thể chuyển lại Đang đọc và xóa ngày hoàn thành. Lần đầu chuyển Đang đọc ghi `startedAt`; chuyển Đã đọc ghi `finishedAt`. Ngày bắt đầu được giữ lại. Sách không rõ tổng vẫn có thể được đánh dấu Đã đọc thủ công, không tính phần trăm.
+
+Cập nhật dùng transaction và khóa bản ghi để tiến độ, trạng thái, ngày đọc nhất quán. `lastProgressAt` do server đặt khi trang thực sự thay đổi; client không được ghi trường này.
+
+`DELETE /api/shelf/:bookId` xóa cả bản ghi tủ và sách trong transaction, trả `{"status":200,"data":{"bookId":"OL...W","removed":true}}`. FE hỏi xác nhận trước khi gọi. Cập nhật/xóa sách không nằm trong tủ trả 404 `SHELF_ENTRY_NOT_FOUND`.
+
+### API tổng quan
+
+`GET /api/dashboard?limit=4` trả `stats`, `continueReading`, `nearlyFinished`, `recentlyFinished` trong `data`. Mỗi nhóm có `data` và `meta: {count,total,limit}`; giới hạn số nguyên 1–6, mặc định 4. Tổng số và giới hạn được xử lý trong MySQL. Một sách có thể xuất hiện đồng thời ở Tiếp tục đọc và Sắp đọc xong.
+
+Nhóm Sắp đọc xong dùng tỷ lệ chính xác trong SQL, không dùng phần trăm hiển thị đã làm tròn xuống. Bản ghi cũ giữ `lastProgressAt = null` vì không thể suy ngược thời gian đọc từ `updatedAt`. Sửa ghi chú/đánh giá không đổi thứ tự hoạt động. Danh sách và thống kê là các truy vấn đọc thông thường, không phải ảnh chụp database trong một transaction duy nhất. Mở/quay lại tổng quan sẽ tải dữ liệu; khi lỗi có nút Thử lại.
+
+## Bắt lỗi và ghi log
+
+Controller, service, repository và adapter dùng `try/catch` tại các thao tác cần bắt lỗi. Service/repository ghi lỗi rồi ném lại; controller trả response thống nhất bằng `sendSuccess`/`sendError`. Không dùng middleware lỗi toàn cục riêng. Lỗi cấu hình/kết nối MySQL được bắt trước khi server mở cổng.
+
+`logger.logError(error, operation, req)` gom việc ghi lỗi thành một lời gọi; cùng lỗi đi qua nhiều lớp không bị ghi lặp. `constants/responseConstants.js` và `constants/logConstants.js` quản lý mã phản hồi/thông báo vận hành. Lỗi nội bộ trả thông báo chung, không gửi stack hoặc SQL cho FE.
+
+Log in ra terminal và lưu bất đồng bộ tại `bookmg-repo-be/logs/YYYY-MM-DD.log` dưới dạng JSON, thời gian UTC. Có log khởi động/tắt, request hoàn tất và lỗi. Không ghi body/header/query của request; các trường nhạy cảm trong ngữ cảnh được che. Thư mục log bị Git bỏ qua. Chưa có chính sách tự xóa file log cũ.
+
+## Kiểm thử và dữ liệu mẫu
+
+Chạy tại thư mục gốc sau khi cài package:
+
+```powershell
+# Kiểm tra BE với nguồn HTTP và các ranh giới database được giả lập
+npm --prefix bookmg-repo-be test
+# Kiểm tra đầu vào, component và điều hướng FE
+npm --prefix bookmg-repo-fe test
+npm --prefix bookmg-repo-fe run build
+npm --prefix bookmg-repo-fe run check:api
+# Kiểm tra kết nối database thực đã cấu hình
+npm --prefix bookmg-repo-be run db:check
+# Kiểm tra migration, ràng buộc, transaction trên database tạm
+npm --prefix bookmg-repo-be run db:test
+```
+
+`db:test` tạo database tên ngẫu nhiên rồi xóa khi xong; tài khoản cần quyền CREATE/DROP DATABASE. Không ghi dữ liệu vào tủ sách đang dùng và không tạo dữ liệu mẫu trên demo. Bộ kiểm tra MySQL bao gồm thêm/xóa, rollback, giới hạn tiến độ, quan hệ, migration và truy vấn tổng quan.
+
+Kết quả kiểm tra local gần nhất cho tính năng chủ đề/tác giả: 23 test BE, 9 test FE, build và proxy đạt. Luồng click chủ đề → tìm kiếm → trang tiếp theo được kiểm tra chỉ đọc bằng Edge trên local. Kết quả đó không thay thế kiểm tra GitHub CI hoặc phiên bản public.
+
+Có thể thử API bằng REST Client trong VS Code; mở file và bấm **Send Request**. Sửa `baseUrl` cho đúng BE đang thử:
+
+- [books.http](bookmg-repo-be/requests/books.http): tìm kiếm, chủ đề, chi tiết và ảnh.
+- [shelf.http](bookmg-repo-be/requests/shelf.http): đọc, thống kê, thêm, sửa, xóa.
+- [reading-flow.http](bookmg-repo-be/requests/reading-flow.http): luồng mẫu đầy đủ.
+- [dashboard.http](bookmg-repo-be/requests/dashboard.http): tổng quan và giới hạn.
+
+File tủ sách/luồng mẫu có thao tác ghi; chạy từng request sau khi đọc nội dung. Không chạy cả luồng xóa lên demo một cách vô ý.
+
+Để chuẩn bị dữ liệu cho người chấm, tìm The Hobbit, xem phiên bản/số trang rồi thêm; thêm hai tác phẩm khác để có sách ở cả ba trạng thái. Sửa ở chi tiết để một sách Đang đọc, một sách Đã đọc; có thể thêm đánh giá/ghi chú. Nên có ít nhất một sách biết tổng trang để thử tiến độ. Dữ liệu Open Library có thể thay đổi; kiểm tra lại phiên bản, không giả định mọi sách đều có đủ thông tin. Tải lại tủ để xác nhận đã lưu. Chưa có lệnh seed tự động.
+
+## Triển khai trên VPS
+
+Cấu hình trong `compose.yaml` chạy MySQL, tác vụ migration, Express và Caddy trên Ubuntu VPS. Caddy phục vụ bản Vue đã build, chuyển `/api/*` tới BE và trả `index.html` cho các route FE. Chỉ cổng web 80/443 được công khai; cổng MySQL/BE không được xuất ra ngoài. HTTPS được cấp cho tên miền trong `BOOKMG_DOMAIN`.
+
+Cần Docker Engine/Compose, tên miền trỏ DNS tới VPS, quyền truy cập GitHub của máy chủ và cổng 80/443 được mở. Với máy mới:
 
 ```sh
+git clone https://github.com/Ngoquyen07/bookmg-workspace.git /home/ubuntu/apps/bookmg
+cd /home/ubuntu/apps/bookmg
+git switch main
+# Chỉ copy khi chưa có .env; sửa tên miền và hai mật khẩu khác nhau.
 cp deploy/env.example .env
-# Edit .env: set the real domain and two different random passwords.
 docker compose config --quiet
 docker compose up -d --build
 docker compose ps
-curl -f https://YOUR_DOMAIN/api/health
+curl -f https://TEN_MIEN_CUA_BAN/api/health
 ```
 
-Keep `.env` private; it is ignored by Git. `docker compose up` waits for MySQL,
-runs Sequelize migrations, then starts the API and web server. MySQL data, API
-log files, and Caddy certificates use separate named volumes. No database port
-or backend port is exposed publicly.
+`.env` gốc dùng cho Docker, khác `.env` local trong từng thư mục FE/BE. Điền `BOOKMG_DOMAIN`, `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, không commit thông tin thật. Compose đợi MySQL sẵn sàng, chạy migration thành công rồi mới khởi động BE và web. Database, log BE và chứng chỉ Caddy có volume riêng. Thêm dữ liệu mẫu sau lần triển khai mới.
 
-The VPS at `/home/ubuntu/apps/bookmg` is a checkout of GitHub `main` with a
-read-only deploy key. Its systemd timer checks `main` about once a minute. For
-a new commit, `deploy/bookmg-sync.sh` fast-forwards the checkout, rebuilds the
-containers, and verifies MySQL, the API, and the frontend through local HTTPS.
-If verification fails, it restores the previous code and containers. After the
-initial deployment, install and enable the timer on the VPS:
+### Đồng bộ GitHub → VPS
+
+Theo cấu hình dự án, checkout nằm tại `/home/ubuntu/apps/bookmg`, dùng nhánh `main` và deploy key chỉ đọc. Bộ hẹn giờ kiểm tra nhánh khoảng một phút/lần. Cài bộ hẹn giờ sau khi triển khai ban đầu:
 
 ```sh
 sudo install -m 644 deploy/systemd/bookmg-deploy.service /etc/systemd/system/
@@ -100,7 +406,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now bookmg-deploy.timer
 ```
 
-Check the deployed commit and timer logs with:
+`deploy/bookmg-sync.sh` chỉ cập nhật khi lịch sử cho phép fast-forward và checkout không có thay đổi được Git theo dõi. Nó rebuild container rồi kiểm tra kết nối database, API và giao diện qua HTTPS local. Nếu thất bại, script thử khôi phục mã/container cũ; không tự rollback migration hoặc dữ liệu database. Cần backup MySQL và xem tính tương thích schema trước khi triển khai thay đổi schema. `docker compose down -v` xóa volume dữ liệu.
+
+Kiểm tra commit đang chạy và log bộ hẹn giờ:
 
 ```sh
 cd /home/ubuntu/apps/bookmg
@@ -110,423 +418,25 @@ systemctl status bookmg-deploy.timer
 journalctl -u bookmg-deploy.service -n 80 --no-pager
 ```
 
-Push updates through a PR into `main`; the VPS does not deploy task branches.
-Keep migrations backward compatible with the previous app version so code
-rollback remains possible. Back up the MySQL volume before schema changes or
-server replacement; `docker compose down -v` deletes data.
+Địa chỉ FE public là `https://TEN_MIEN/`, API là `https://TEN_MIEN/api`, kiểm tra BE tại `/api/health`. Việc cùng dùng một tên miền giúp FE tiếp tục gọi `/api` tương đối. Đẩy `develop` lên remote không triển khai lên VPS; phải tích hợp bản được duyệt vào `main`.
 
-The public frontend URL is `https://YOUR_DOMAIN/` and the backend health URL is
-`https://YOUR_DOMAIN/api/health`. Both share one origin, so the client uses its
-existing relative `/api` URLs. The current assignment is a shared single-user
-shelf: anyone with the URL can change its contents. Add at least one sample book
-after deployment so reviewers can inspect the shelf.
+## Quy trình Git và kiểm tra CI
 
-Ứng dụng theo dõi sách gồm Vue + Vite và Node.js + Express, dùng JavaScript ES modules.
-Yêu cầu Node.js >= 22.12.0 và npm.
+`develop` là nhánh tích hợp phát triển. Nhánh tính năng/sửa lỗi được tích hợp vào đây; phát hành sang `main` là bước riêng. Dùng thông điệp Conventional Commits và PR hướng tới `main` khi chuẩn bị phát hành. Quy tắc cho agent nằm trong `AGENTS.md` và `.agents/skills/bookmg-git-workflow/SKILL.md`.
 
-## Chạy local
+GitHub Actions hiện chạy build FE và kiểm tra proxy FE → BE trên Node 22 khi push `main` hoặc tạo PR vào `main`. Tên kiểm tra là `Build and API checks`. Workflow chưa chạy toàn bộ test BE/FE hoặc MySQL tích hợp. Quy tắc bảo vệ nhánh phải cấu hình trên GitHub; file workflow không tự áp đặt việc bảo vệ.
 
-Mở hai terminal tại workspace.
+## Giả định, hạn chế và hướng cải thiện
 
-Backend:
+- Một tủ sách dùng chung, không có đăng nhập. Người truy cập demo có thể sửa dữ liệu chung.
+- Chưa hỗ trợ chọn trạng thái lúc thêm; khác biệt này đã ghi rõ ở phần đối chiếu đề bài.
+- Open Library không đảm bảo bìa, tác giả, năm hay số trang đầy đủ. Mỗi phiên bản có thể khác số trang; hiện chỉ gợi ý từ 50 phiên bản đầu, chưa có giao diện chọn mọi phiên bản.
+- Chi tiết cần nguồn Open Library ngay cả khi sách đã lưu; lỗi nguồn có thể ảnh hưởng màn chi tiết. Tủ/thống kê/tổng quan đọc metadata đã lưu trong MySQL.
+- Không đọc nội dung toàn văn trên ứng dụng, không có lịch sử số trang từng ngày, mục tiêu đọc hoặc phân quyền.
+- Chưa có seed mẫu tự động, cache metadata/search BE, chính sách dọn log hoặc test MySQL trong CI.
+- Khả năng hoạt động liên tục ít nhất 7 ngày sau nộp phụ thuộc vận hành VPS, tên miền và container; source code không chứng minh được điều này.
+- Có thêm thời gian: tự động hóa dữ liệu mẫu và kiểm thử MySQL trong CI, bổ sung chọn phiên bản sách, cache nguồn và giám sát vận hành. Nếu thêm tài khoản phải thiết kế ownership và uniqueness theo người dùng.
 
-```powershell
-cd bookmg-repo-be
-npm install
-Copy-Item .env.example .env
-npm run dev
-```
+## Trước khi nộp bài
 
-Backend chạy ở http://127.0.0.1:3000. Kiểm tra bằng
-http://127.0.0.1:3000/api/health, trả về `{"status":200,"data":{"status":"ok"}}`.
-Host và cổng được lấy từ `BASE_URL` trong `bookmg-repo-be/.env`.
-
-Frontend:
-
-```powershell
-cd bookmg-repo-fe
-npm install
-Copy-Item .env.example .env
-npm run dev
-```
-
-Frontend chạy ở http://127.0.0.1:5173. Host và cổng được lấy từ `BASE_URL`
-trong `bookmg-repo-fe/.env`. `API_BASE_URL` trong cùng file trỏ đến backend
-và phải bằng `BASE_URL` trong `.env` của backend.
-
-Frontend gọi API bằng Axios với đường dẫn tương đối, ví dụ `/api/books/search`.
-Vite chuyển request `/api` tới `API_BASE_URL` khi chạy dev, nên không cần
-thiết lập CORS cho môi trường dev hiện tại. Các biến này chỉ được Vite đọc ở server;
-không cần đưa URL backend vào bundle trình duyệt.
-
-`.env` local đã được tạo; khi clone mới, copy từ `.env.example`.
-Chỉ chạy lệnh copy khi chưa có `.env` để tránh ghi đè cấu hình riêng.
-Sau khi đổi `.env`, khởi động lại server tương ứng.
-
-## Build và start
-
-- Frontend: `npm run build` tạo `dist/`; `npm run preview` xem bản build local.
-- Backend: `npm start` chạy server không bật watch.
-- Kiểm tra kết nối FE → BE: chạy `npm run check:api` trong `bookmg-repo-fe`
-  (dùng cổng test 15173 và 13000).
-- Proxy của Vite chỉ dùng cho dev. Khi deploy cần cấu hình route `/api` tới backend.
-
-## Frontend
-
-Frontend dùng Vue Router cho ba trang: `/` tìm sách, `/books/:workId` chi tiết
-và `/shelf` tủ sách. Ba trang nằm trong `src/views`; `src/modules/books` và
-`src/modules/shelf` chứa API, component và validation theo chức năng.
-`src/services/api.js` là Axios client chung, còn thông báo lỗi API nằm trong
-`src/config/messageConfig.js`. `src/components` chứa component dùng ở nhiều
-trang; `src/router` chứa cấu hình route. Giao diện
-dùng Tailwind CSS 4. Không cần đăng nhập hoặc Pinia store cho phạm vi một người dùng.
-
-Tìm kiếm giữ từ khóa, trường tìm kiếm và trang trong URL. Khi thêm sách từ kết quả,
-frontend đọc chi tiết để lấy edition gợi ý trước khi gửi `POST /api/shelf`; dữ liệu
-và ảnh luôn đi qua backend. Trang tủ sách dùng dữ liệu và thống kê MySQL; số trang
-không rõ được hiển thị là `?` và không tính phần trăm. FE kiểm tra form trước khi
-gửi; BE vẫn là nơi thực thi các quy tắc nghiệp vụ.
-
-Chạy `npm test` trong `bookmg-repo-fe` để kiểm tra validation, `npm run check:api`
-để kiểm tra proxy FE → BE, và `npm run build` để tạo bản production. Khi deploy,
-web server phải chuyển `/api` về backend và trả `index.html` cho các route FE.
-
-## MySQL qua Sequelize
-
-Backend đã cài Sequelize 6 và driver `mysql2`. Kết nối dùng chung nằm ở
-`bookmg-repo-be/config/database.js`.
-
-Thêm cấu hình sau vào `bookmg-repo-be/.env`, thay tên database, tài khoản và
-mật khẩu bằng thông tin MySQL của bạn. Database phải tồn tại trước khi kết nối.
-Không ghi đè các cấu hình `.env` đã có.
-
-```dotenv
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=bookmg
-DB_USER=root
-DB_PASSWORD=
-```
-
-Kiểm tra kết nối từ thư mục backend:
-
-```powershell
-npm run db:check
-```
-
-Khi tạo model, import kết nối này và khai báo các cột bằng `DataTypes` của
-`sequelize`; gọi `Model.create()`, `Model.findAll()`, `Model.update()` hoặc
-`Model.destroy()` để thao tác dữ liệu qua ORM.
-Hướng dẫn: https://sequelize.org/docs/v6/core-concepts/model-basics/
-
-Đã có model và migration cho `books` và `shelf_entries`, API health, tìm kiếm sách và proxy ảnh bìa.
-Lệnh `db:check` chỉ kiểm tra kết nối, không tạo hay sửa bảng.
-Git quản lý tại workspace;
-hai thư mục con không có `.git` riêng. Không commit `.env` hoặc secrets.
-
-## Book and shelf schema
-
-`models/book.js` stores book metadata: Open Library work ID (`OL...W`),
-title, authors, cover ID, first publication year, description and subjects.
-Authors and subjects are JSON arrays.
-Unknown page counts are `null`, never zero. Both models include timestamps.
-
-`models/shelfEntry.js` stores shelf membership: ID, book ID, reading status,
-current page, optional edition ID (`OL...M`) and total pages, optional integer
-rating (1–5), notes (up to 1,000 characters),
-reading start date and completion date. Status values are `want_to_read`,
-`reading` and `finished`.
-
-Import models through `models/index.js` to register associations. A book has
-zero or one shelf entry in the current single-user application. Each shelf entry
-belongs to one book; `bookId` is a unique foreign key. Removing a book from the
-shelf deletes both rows in a transaction. MySQL rejects deletion of a book
-while its shelf entry still exists.
-There is no user model or authentication in this scope.
-
-Run these commands from `bookmg-repo-be`:
-
-```powershell
-npm run db:migrate
-npm run db:migrate:status
-npm test
-npm run db:test
-```
-
-`db:migrate` applies versioned schema changes to `DB_NAME` configured in `.env`.
-Starting the server does not run migrations or synchronize tables automatically.
-MySQL 8.0.16 or newer is required to enforce the CHECK constraints.
-`npm test` covers model validation without connecting to MySQL. `db:test` checks
-migrations, persistence, constraints and rollback in a randomly named temporary
-database, then deletes that database. Its account needs CREATE/DROP DATABASE
-privileges; it does not change the application database.
-
-Search requests do not create database records; adding to the shelf persists
-both records in one transaction. Shelf updates validate progress and change
-reading dates in a transaction.
-
-## Backend entrypoints and environment
-
-The backend uses root `app.js` for Express middleware/routes and root `server.js`
-for startup. `config/env.js` loads the backend `.env` with dotenv, preserving
-environment variables supplied by the shell or deployment platform.
-`config/database.js` exports the shared Sequelize connection. Startup verifies
-MySQL before opening the HTTP port; it does not create or alter tables.
-
-Run `npm run dev` for watch mode, `npm start` for normal startup,
-`npm run db:check` to verify MySQL, and `npm test` for backend checks.
-The frontend proxy check starts `app.js` independently of MySQL; it verifies HTTP
-routing, while `db:check` verifies the real configured database connection.
-
-## Backend logs
-
-Backend logs are written asynchronously to `bookmg-repo-be/logs/YYYY-MM-DD.log`
-and printed to the terminal. Each line is a JSON record with a UTC timestamp,
-level, message and context. Logs include startup/shutdown, completed HTTP requests
-and HTTP errors. Request bodies, headers and query strings are not logged;
-sensitive context keys are redacted. The logs directory is ignored by Git.
-Daily files are retained until removed; automatic retention is not configured.
-
-## API response contract
-
-JSON success responses use `{ "status": 200, "data": ... }`, with optional
-`meta` for list counts and pagination. Errors use `{ "status": 400, "error": { "code": "...",
-"message": "..." } }`. The numeric `status` always matches the HTTP status
-(for example, 201 for creation or 409 for a duplicate). The frontend should
-branch on `error.code`, not message text. Binary cover responses remain JPEG;
-their status is available as the HTTP `Response.status` value.
-
-`constants/responseConstants.js` defines status codes and public errors;
-`constants/logConstants.js` defines log levels and operational messages.
-Controllers use explicit `try/catch` to log failures and send responses through
-`utils/apiResponse.js`. Expected application errors use `utils/apiError.js` and
-the predefined public descriptors; unexpected failures remain generic 500
-responses. `app.js` catches JSON parser errors before routing. There is no custom
-global error middleware. Service/repository operations must be awaited inside
-the controller's try block; add the same explicit boundary to each new controller.
-The adapter catches upstream errors and rethrows typed application errors.
-Startup also catches database configuration/import and connection errors; shutdown
-attempts database cleanup even if closing the HTTP listener fails.
-
-Services and repositories also catch failures at their operation boundaries,
-call `logger.logError(error, operation)`, then rethrow the same error. The helper
-records safe diagnostics at the first failing layer and avoids duplicate error
-records as that error crosses layers. HTTP completion logs still record the
-request path and status. Use the optional third argument for request context
-when the error originates in a controller or request parser.
-
-```js
-catch (error) {
-  logger.logError(error, 'bookController.searchBooks', req)
-  return sendError(res, error)
-}
-```
-
-`sendError` resolves typed application errors, parser errors and unexpected
-failures into the public response contract; it does not log or catch operations.
-
-## Book search API
-
-For manual testing in VS Code, install REST Client and open
-`bookmg-repo-be/requests/books.http`. Start the backend with `npm run dev`, then
-click **Send Request** above an individual request (or press `Ctrl+Alt+R`).
-Set the file's `baseUrl` to match the backend's `BASE_URL`; update `coverId` from
-a search response when testing covers. The file contains only read-only requests.
-
-The request flow is router → controller → service → Open Library adapter, with
-a repository read for shelf membership. No search or cover request creates books
-or shelf entries. Native Node.js `fetch` calls fixed upstream hosts with a
-10-second deadline, including response body consumption.
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/api/books/search?q=Harry%20Potter&page=1&limit=20` | Search books and mark existing shelf entries |
-| GET | `/api/books/covers/15155833` | Proxy a medium JPEG cover through the backend |
-| GET | `/api/books/OL82563W` | Read normalized work details and a suggested edition with a page count |
-
-Search parameters: required nonblank `q` (up to 200 characters), optional `field`
-(`all`, `title`, `author`, or `subject`; default `all`), `page` (1–10,000; default 1), and
-`limit` (1–50; default 20). Unknown parameters are rejected. `field=all` uses
-Open Library's general search; title/author modes use their respective fields.
-Subject mode uses a safely escaped quoted subject phrase. Click a subject in book
-detail to open discovery with that subject selected; pagination retains the mode.
-See [subject search plan and specification](docs/features/subject-search.md).
-
-```json
-{
-  "status": 200,
-  "data": [
-    {
-      "id": "OL82563W",
-      "title": "Harry Potter and the Philosopher's Stone",
-      "authors": ["J. K. Rowling"],
-      "coverId": 15155833,
-      "coverUrl": "/api/books/covers/15155833",
-      "firstPublishYear": 1997,
-      "isInShelf": false
-    }
-  ],
-  "meta": { "page": 1, "limit": 20, "count": 1, "total": 4063, "totalPages": 204 }
-}
-```
-
-The response above illustrates the format; search totals and metadata may change.
-`meta.count` is the number of books in this page; `meta.total` is the number
-of matches across all pages.
-Missing authors become `[]`; missing cover/year values become `null`.
-The frontend uses the returned relative `coverUrl`, with a local placeholder if
-it is null or the cover is unavailable. Successful covers have a one-day browser
-cache lifetime. No backend search cache or automatic retries are implemented.
-
-Invalid input returns 400 `VALIDATION_ERROR`, missing covers return 404
-`COVER_NOT_FOUND`, upstream HTTP/network/invalid-response failures return 502
-`OPEN_LIBRARY_ERROR`, and upstream deadlines return 504 `OPEN_LIBRARY_TIMEOUT`.
-Shelf lookup failures return 500 instead of reporting incorrect membership.
-The adapter identifies the application as `MiniReadingTracker/1.0`; a contact
-identifier and traffic controls remain to be configured before frequent use.
-See the official [search API](https://openlibrary.org/dev/docs/api/search),
-[covers API](https://openlibrary.org/dev/docs/api/covers), and
-[usage guidelines](https://openlibrary.org/developers/api).
-
-Run `npm test` in the backend for HTTP, normalization, validation and failure
-checks with mocked upstream responses and shelf reads. `npm run db:test` checks
-the add-to-shelf transaction against a temporary MySQL database.
-
-## Add a book to the shelf
-
-`POST /api/shelf` accepts a work ID and optional edition ID. New shelf entries
-always start as `want_to_read`; change status afterward with `PATCH /api/shelf/:bookId`:
-
-```json
-{"workId":"OL82563W","editionId":"OL62514708M"}
-```
-
-The backend reads work metadata and author names from Open Library. If an edition
-is supplied, it checks that the edition belongs to the work and reads its page
-count. Without an edition, total pages remain `null`. External requests finish
-before the database transaction. The transaction reuses an existing book when
-present and creates one shelf entry; failures roll back both writes. A duplicate
-entry returns 409. Invalid input or an unrelated edition returns 400, a missing
-work returns 404, and upstream failures return 502/504. A successful add returns
-201 with `data.book` and `data.shelfEntry`. See `requests/shelf.http` for manual
-requests. Run `npm run db:migrate` before using this endpoint.
-
-## Book details and shelf reads
-
-`GET /api/books/:workId` validates an Open Library work ID and returns work
-metadata, a relative `coverUrl`, `isInShelf`, `editionId`, and `totalPages`.
-For a book already in the shelf, the edition and page count come from its saved
-shelf entry. Otherwise, the backend checks the first 50 Open Library editions
-and suggests the first one with a valid page count. That page count belongs to
-the returned `editionId`, not to every edition of the work. If none is found,
-both fields are `null`. The endpoint only reads data; the frontend may send
-the suggested `editionId` to `POST /api/shelf`. Invalid IDs or query parameters
-return 400; missing works return 404.
-
-`GET /api/shelf` returns shelf entries newest first in pages of 10. Optional
-`status` can be `want_to_read`, `reading`, or `finished`; `page` defaults to 1
-(maximum 10,000) and `limit` defaults to 10 (maximum 50). Invalid query
-parameters return 400. Each item has `{ book, shelfEntry, progressPercent }`.
-The book includes a relative `coverUrl`. `progressPercent` is rounded to the
-nearest integer when `totalPages` is known, and `null` otherwise. An empty
-shelf or filter returns `data: []` and `meta: { page, limit, count: 0, total: 0,
-totalPages: 0 }`. `meta.count` is the number of items on this page; `meta.total`
-is the number matching the status filter. `GET /api/shelf/:bookId` returns one
-entry in the same item shape for the detail screen, or 404 if it is absent.
-
-`GET /api/shelf/stats` returns `{ "status": 200, "data": { "total": 0,
-"wantToRead": 0, "reading": 0, "finished": 0 } }` for an empty shelf and the corresponding
-counts otherwise. It rejects query parameters with 400. Both shelf reads use
-MySQL only; they do not call Open Library. Try them with `requests/shelf.http`.
-
-## Update or remove a shelf book
-
-`PATCH /api/shelf/:bookId` accepts one or more of `currentPage` (integer from
-zero through the known total), `status` (`want_to_read`, `reading`, `finished`),
-`rating` (integer 1–5 or `null` to clear), and `notes` (up to 1,000 characters
-or `null` to clear). Other fields, empty bodies, and invalid work IDs return 400.
-The response's `data` is the updated shelf entry. Updates use a row lock and
-transaction so page, status, and reading dates change together.
-
-When the page is above zero but below a known total, status becomes `reading`.
-When it reaches the total, status becomes `finished` and `finishedAt` is set.
-Setting status to `finished` without a page sets the page to the known
-total; sending a conflicting lower page returns 400. Lowering the page of a
-finished book without specifying a status changes it back to `reading` and
-clears `finishedAt`. The first transition to `reading` sets `startedAt`, which
-is preserved thereafter. Without a known total, `currentPage` cannot be
-updated, but status, rating, and notes can be changed. The user can explicitly
-choose `finished`; unknown page counts still yield `progressPercent: null`.
-
-`DELETE /api/shelf/:bookId` removes the shelf entry, then its book metadata in
-one transaction, and returns
-`{ "status": 200, "data": { "bookId": "OL...W", "removed": true } }`.
-If either deletion fails, both are rolled back. Adding the work again creates
-new rows in both tables. Both endpoints return 404 `SHELF_ENTRY_NOT_FOUND`
-when the work is not in the shelf. The
-frontend must ask for confirmation before sending the DELETE request.
-
-## GitHub workflow
-
-Use short-lived task branches from `main`, Conventional Commit messages, and pull
-requests targeting `main`. Prefer squash merges and delete merged branches.
-See `AGENTS.md` and `.agents/skills/bookmg-git-workflow/SKILL.md` for agent routing
-and the repository's Git conventions.
-
-GitHub Actions runs frontend build and the frontend-to-backend proxy test on Node 22.
-The check is named `Build and API checks`; it uses explicit test URLs, requires no
-production secrets, and does not yet test database business logic.
-Once CI has run on GitHub, use that check when protecting `main`. Repository merge
-settings and branch protection must also be configured on GitHub; local workflow
-files alone do not enforce them.
-
-## Reading dashboard
-
-Dashboard is the new local homepage at `/`; discovery is at `/discover`. Old root
-search URLs keep their keyword/filter/page when redirected to discovery. Dashboard
-cards open the existing clean book-detail URLs. Section links open the correct
-shelf tab through router state, and detail back navigation preserves that state.
-
-The feature plan, response contract, business rules, component map, visual design,
-and acceptance checks are in [Reading dashboard](docs/features/reading-dashboard.md).
-
-Before running the updated backend locally:
-
-```powershell
-cd D:\bookmg-workspace\bookmg-repo-be
-npm.cmd run db:migrate
-```
-
-`GET /api/dashboard?limit=4` returns the normal `{ status: 200, data: ... }` envelope.
-`data` contains `stats`, `continueReading`, `nearlyFinished`, and `recentlyFinished`.
-Each list has `data` and `meta: { count, total, limit }`. The limit defaults to 4 and
-accepts integers from 1 to 6; unknown query parameters are rejected.
-
-Continue reading sorts reading books by the last change to their page progress,
-falling back to their start date or creation time. Editing a note/rating or saving
-the same page does not change `lastProgressAt`. Nearly finished contains reading
-books with a known positive total and an exact progress ratio from 80% up to,
-but excluding, 100%. Recently finished sorts by completion date. All filtering,
-sorting and counts happen in MySQL; no Open Library metadata calls are needed.
-Unknown page counts stay readable and are excluded from Nearly finished.
-
-Existing entries have no reconstructed progress timestamp; their historical
-`updatedAt` includes unrelated edits. The migration preserves null activity, and
-the next real page change sets it inside the existing shelf transaction. Manual
-local requests are in `bookmg-repo-be/requests/dashboard.http`. The isolated
-`npm run db:test` checks dashboard thresholds, limits, ordering, counts, activity,
-and reversible migrations. The feature is not deployed until merged into `main`.
-
-## Assumptions, limitations, and possible improvements
-
-- The assignment has one shared shelf and no login. Anyone with the demo URL can edit it.
-- Initial status selection was intentionally removed by agreement: newly added books
-  always start as want-to-read; status can be changed after adding.
-- Page count belongs to an edition, not a work. The detail API suggests an edition
-  from the first 50 results; if none has a valid page count, numerical progress
-  stays unavailable. Search results may also lack covers or publication years.
-- Fresh deployments have no seed script; add a sample book before sharing a new URL.
-- Availability for at least seven days after submission depends on keeping the VPS,
-  domain, and containers running. Check the public health URL and deployment timer.
-- Future improvements: a repeatable sample-data seed and isolated MySQL integration
-  checks in CI. Authentication would require per-user shelf ownership.
+Cấp quyền repository, gửi link FE/BE, xác nhận commit trên VPS đúng bản nộp và migration đã chạy. Kiểm tra HTTPS, có dữ liệu mẫu xem ngay và thử luồng tìm → chi tiết → thêm → sửa → xóa có xác nhận trên bản phát hành. Kiểm tra thêm trùng trả 409 và dữ liệu sai bị từ chối. Trình bày các điểm khác đề/tính năng bổ sung ở trên; giữ dịch vụ hoạt động và theo dõi ít nhất 7 ngày sau khi nộp.
