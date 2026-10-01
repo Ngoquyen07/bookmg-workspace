@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test test/validation.test.js",
+    "test": "node --test test/validation.test.js && vitest run test/forms.test.js",
     "preview": "vite preview",
     "check:api": "node --test test/proxy.test.js"
   },

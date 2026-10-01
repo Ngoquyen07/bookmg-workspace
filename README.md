@@ -1,5 +1,67 @@
 # Mini Reading Tracker
 
+Mini Reading Tracker is a single-user app for finding books through Open Library,
+saving them to a MySQL shelf, and tracking reading status, progress, ratings, and notes.
+
+- Frontend demo: https://pentest-142.store/
+- Backend health check: https://pentest-142.store/api/health (other API routes share this HTTPS origin)
+- Stack: Vue 3, Vue Router, Vite, Tailwind CSS, Axios; Node.js, Express, Sequelize, MySQL; Docker Compose and Caddy on an Ubuntu VPS.
+
+The screenshots below were captured from the local frontend and local MySQL-backed
+API on 2026-10-01.
+
+![Book search](docs/screenshots/search-local.png)
+![Book detail with initial reading status](docs/screenshots/detail-local.png)
+
+The browser calls only the Express API. The API reads book metadata and covers from
+Open Library and persists the shelf in MySQL.
+
+| Method | API path | Purpose |
+| --- | --- | --- |
+| GET | `/api/health` | Check backend availability |
+| GET | `/api/books/search` | Search books by title or author |
+| GET | `/api/books/:workId` | Get work details and suggested edition |
+| GET | `/api/books/covers/:coverId` | Proxy a cover image |
+| GET | `/api/shelf` | List and filter saved books |
+| GET | `/api/shelf/stats` | Get shelf counts |
+| GET | `/api/shelf/:bookId` | Get one saved book |
+| POST | `/api/shelf` | Add a book with its initial status |
+| PATCH | `/api/shelf/:bookId` | Update progress, status, rating, or notes |
+| DELETE | `/api/shelf/:bookId` | Remove a book after client confirmation |
+
+```mermaid
+flowchart LR
+    Browser[Vue frontend] -->|/api| Express[Express backend]
+    Express -->|book search, details, covers| OpenLibrary[Open Library]
+    Express -->|Sequelize| MySQL[(MySQL)]
+```
+
+```mermaid
+erDiagram
+    BOOKS ||--o| SHELF_ENTRIES : "has"
+    BOOKS {
+        string id PK "Open Library work ID"
+        string title
+        json authors
+        int coverId
+        int firstPublishYear
+        text description
+        json subjects
+    }
+    SHELF_ENTRIES {
+        int id PK
+        string bookId FK "UNIQUE"
+        string status
+        int currentPage
+        string editionId
+        int totalPages
+        int rating
+        string notes
+        date startedAt
+        date finishedAt
+    }
+```
+
 ## Deploy with Docker Compose
 
 This setup runs MySQL, the Express API, and a Caddy web server on one VPS. Only
@@ -413,3 +475,15 @@ production secrets, and does not yet test database business logic.
 Once CI has run on GitHub, use that check when protecting `main`. Repository merge
 settings and branch protection must also be configured on GitHub; local workflow
 files alone do not enforce them.
+
+## Assumptions, limitations, and possible improvements
+
+- The assignment has one shared shelf and no login. Anyone with the demo URL can edit it.
+- Page count belongs to an edition, not a work. The detail API suggests an edition
+  from the first 50 results; if none has a valid page count, numerical progress
+  stays unavailable. Search results may also lack covers or publication years.
+- Fresh deployments have no seed script; add a sample book before sharing a new URL.
+- Availability for at least seven days after submission depends on keeping the VPS,
+  domain, and containers running. Check the public health URL and deployment timer.
+- Future improvements: a repeatable sample-data seed and isolated MySQL integration
+  checks in CI. Authentication would require per-user shelf ownership.

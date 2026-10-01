@@ -95,8 +95,9 @@ function save() {
       <div class="sm:col-span-2">
         <p class="text-sm font-semibold">Đánh giá</p>
         <div class="mt-1 flex items-center gap-1" role="group" aria-label="Đánh giá từ 1 đến 5 sao">
-          <button v-for="star in 5" :key="star" type="button" class="px-1 text-2xl text-[#b88732]" :aria-label="`${star} sao`" :aria-pressed="rating !== null && star <= rating" @click="rating = star; validate()">{{ star <= rating ? '★' : '☆' }}</button>
+          <button v-for="star in 5" :key="star" type="button" class="px-1 text-2xl text-[#b88732]" :aria-label="rating === star ? 'Bỏ đánh giá' : `${star} sao`" :aria-pressed="rating !== null && star <= rating" @click="rating = rating === star ? null : star; validate()">{{ star <= rating ? '★' : '☆' }}</button>
         </div>
+        <p class="mt-1 text-xs text-muted">Nhấn lại số sao đã chọn để bỏ đánh giá.</p>
         <p v-if="errors.rating" role="alert" class="mt-1 text-sm font-normal text-danger">{{ errors.rating }}</p>
       </div>
       <div class="text-sm font-semibold sm:col-span-2">
