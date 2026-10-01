@@ -1,6 +1,6 @@
 <script setup>
 import { onUnmounted, shallowRef, watch } from 'vue'
-import DropdownSelect from '../../../shared/components/DropdownSelect.vue'
+import DropdownSelect from '../../../components/DropdownSelect.vue'
 import { validateSearch } from '../validation/searchValidation.js'
 
 const props = defineProps({ initialQuery: { type: String, default: '' }, initialField: { type: String, default: 'all' }, busy: Boolean })

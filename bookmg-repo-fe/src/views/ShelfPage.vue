@@ -2,10 +2,10 @@
 import { computed, shallowRef, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { shelfApi } from '../api/shelfApi.js'
-import ShelfBookCard from '../components/ShelfBookCard.vue'
-import ConfirmDialog from '../../../shared/components/ConfirmDialog.vue'
-import PaginationNav from '../../../shared/components/PaginationNav.vue'
+import { shelfApi } from '../modules/shelf/api/shelfApi.js'
+import ShelfBookCard from '../modules/shelf/components/ShelfBookCard.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import PaginationNav from '../components/PaginationNav.vue'
 
 const toast = useToast()
 

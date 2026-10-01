@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import SearchPage from '../../features/books/pages/SearchPage.vue'
-import BookDetailPage from '../../features/books/pages/BookDetailPage.vue'
-import ShelfPage from '../../features/shelf/pages/ShelfPage.vue'
+import SearchPage from '../views/SearchPage.vue'
+import BookDetailPage from '../views/BookDetailPage.vue'
+import ShelfPage from '../views/ShelfPage.vue'
 
 export default createRouter({
   history: createWebHistory(),

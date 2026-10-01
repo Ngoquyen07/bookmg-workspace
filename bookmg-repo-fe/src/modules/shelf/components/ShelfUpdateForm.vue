@@ -1,7 +1,7 @@
 <script setup>
 import { computed, shallowRef, watch } from 'vue'
 import { validateShelfUpdate } from '../validation/shelfValidation.js'
-import DropdownSelect from '../../../shared/components/DropdownSelect.vue'
+import DropdownSelect from '../../../components/DropdownSelect.vue'
 
 const props = defineProps({ entry: { type: Object, required: true }, busy: Boolean })
 const emit = defineEmits(['save'])

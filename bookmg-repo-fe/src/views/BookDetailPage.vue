@@ -2,12 +2,12 @@
 import { computed, shallowRef, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { booksApi } from '../api/booksApi.js'
-import { shelfApi } from '../../shelf/api/shelfApi.js'
-import BookCover from '../../../shared/components/BookCover.vue'
-import AddBookForm from '../components/AddBookForm.vue'
-import ShelfUpdateForm from '../../shelf/components/ShelfUpdateForm.vue'
-import ConfirmDialog from '../../../shared/components/ConfirmDialog.vue'
+import { booksApi } from '../modules/books/api/booksApi.js'
+import { shelfApi } from '../modules/shelf/api/shelfApi.js'
+import BookCover from '../components/BookCover.vue'
+import AddBookForm from '../modules/books/components/AddBookForm.vue'
+import ShelfUpdateForm from '../modules/shelf/components/ShelfUpdateForm.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -2,12 +2,12 @@
 import { computed, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { booksApi } from '../api/booksApi.js'
-import { shelfApi } from '../../shelf/api/shelfApi.js'
-import SearchForm from '../components/SearchForm.vue'
-import BookCard from '../components/BookCard.vue'
-import PaginationNav from '../../../shared/components/PaginationNav.vue'
-import { validateSearch } from '../validation/searchValidation.js'
+import { booksApi } from '../modules/books/api/booksApi.js'
+import { shelfApi } from '../modules/shelf/api/shelfApi.js'
+import SearchForm from '../modules/books/components/SearchForm.vue'
+import BookCard from '../modules/books/components/BookCard.vue'
+import PaginationNav from '../components/PaginationNav.vue'
+import { validateSearch } from '../modules/books/validation/searchValidation.js'
 
 const route = useRoute()
 const router = useRouter()

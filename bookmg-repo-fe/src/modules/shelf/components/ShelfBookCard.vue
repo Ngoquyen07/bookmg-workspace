@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import BookCover from '../../../shared/components/BookCover.vue'
+import BookCover from '../../../components/BookCover.vue'
 
 defineProps({ entry: { type: Object, required: true }, busy: Boolean })
 const emit = defineEmits(['remove'])

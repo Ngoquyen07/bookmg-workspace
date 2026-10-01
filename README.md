@@ -111,10 +111,11 @@ Sau khi đổi `.env`, khởi động lại server tương ứng.
 ## Frontend
 
 Frontend dùng Vue Router cho ba trang: `/` tìm sách, `/books/:workId` chi tiết
-và `/shelf` tủ sách. Mã nguồn chia theo tính năng trong `src/features/books` và
-`src/features/shelf`: mỗi tính năng có `api`, `pages`, `components` và validation
-khi cần. `src/shared/api/http.js` là Axios client chung; `src/shared/components`
-chứa component dùng ở nhiều trang. `src/app` chứa router và header. Giao diện
+và `/shelf` tủ sách. Ba trang nằm trong `src/views`; `src/modules/books` và
+`src/modules/shelf` chứa API, component và validation theo chức năng.
+`src/services/api.js` là Axios client chung, còn thông báo lỗi API nằm trong
+`src/config/messageConfig.js`. `src/components` chứa component dùng ở nhiều
+trang; `src/router` chứa cấu hình route. Giao diện
 dùng Tailwind CSS 4. Không cần đăng nhập hoặc Pinia store cho phạm vi một người dùng.
 
 Tìm kiếm giữ từ khóa, trường tìm kiếm và trang trong URL. Khi thêm sách từ kết quả,

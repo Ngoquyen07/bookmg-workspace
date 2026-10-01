@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { validateSearch } from '../src/features/books/validation/searchValidation.js'
-import { validateShelfUpdate } from '../src/features/shelf/validation/shelfValidation.js'
+import { validateSearch } from '../src/modules/books/validation/searchValidation.js'
+import { validateShelfUpdate } from '../src/modules/shelf/validation/shelfValidation.js'
 
 test('search needs a nonblank keyword within the backend limit', () => {
   assert.ok(validateSearch('   '))
