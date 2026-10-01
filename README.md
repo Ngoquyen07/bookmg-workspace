@@ -1,6 +1,6 @@
 # Mini Reading Tracker
 
-Base dự án gồm Vue + Vite và Node.js + Express, dùng JavaScript ES modules.
+Ứng dụng theo dõi sách gồm Vue + Vite và Node.js + Express, dùng JavaScript ES modules.
 Yêu cầu Node.js >= 22.12.0 và npm.
 
 ## Chạy local
@@ -33,9 +33,9 @@ Frontend chạy ở http://127.0.0.1:5173. Host và cổng được lấy từ `
 trong `bookmg-repo-fe/.env`. `API_BASE_URL` trong cùng file trỏ đến backend
 và phải bằng `BASE_URL` trong `.env` của backend.
 
-Frontend gọi API bằng đường dẫn tương đối, ví dụ `fetch('/api/health')`.
+Frontend gọi API bằng Axios với đường dẫn tương đối, ví dụ `/api/books/search`.
 Vite chuyển request `/api` tới `API_BASE_URL` khi chạy dev, nên không cần
-cài CORS hoặc Axios cho base hiện tại. Các biến này chỉ được Vite đọc ở server;
+thiết lập CORS cho môi trường dev hiện tại. Các biến này chỉ được Vite đọc ở server;
 không cần đưa URL backend vào bundle trình duyệt.
 
 `.env` local đã được tạo; khi clone mới, copy từ `.env.example`.
@@ -49,6 +49,25 @@ Sau khi đổi `.env`, khởi động lại server tương ứng.
 - Kiểm tra kết nối FE → BE: chạy `npm run check:api` trong `bookmg-repo-fe`
   (dùng cổng test 15173 và 13000).
 - Proxy của Vite chỉ dùng cho dev. Khi deploy cần cấu hình route `/api` tới backend.
+
+## Frontend
+
+Frontend dùng Vue Router cho ba trang: `/` tìm sách, `/books/:workId` chi tiết
+và `/shelf` tủ sách. Mã nguồn chia theo tính năng trong `src/features/books` và
+`src/features/shelf`: mỗi tính năng có `api`, `pages`, `components` và validation
+khi cần. `src/shared/api/http.js` là Axios client chung; `src/shared/components`
+chứa component dùng ở nhiều trang. `src/app` chứa router và header. Giao diện
+dùng Tailwind CSS 4. Không cần đăng nhập hoặc Pinia store cho phạm vi một người dùng.
+
+Tìm kiếm giữ từ khóa, trường tìm kiếm và trang trong URL. Khi thêm sách từ kết quả,
+frontend đọc chi tiết để lấy edition gợi ý trước khi gửi `POST /api/shelf`; dữ liệu
+và ảnh luôn đi qua backend. Trang tủ sách dùng dữ liệu và thống kê MySQL; số trang
+không rõ được hiển thị là `?` và không tính phần trăm. FE kiểm tra form trước khi
+gửi; BE vẫn là nơi thực thi các quy tắc nghiệp vụ.
+
+Chạy `npm test` trong `bookmg-repo-fe` để kiểm tra validation, `npm run check:api`
+để kiểm tra proxy FE → BE, và `npm run build` để tạo bản production. Khi deploy,
+web server phải chuyển `/api` về backend và trả `index.html` cho các route FE.
 
 ## MySQL qua Sequelize
 
@@ -279,14 +298,16 @@ both fields are `null`. The endpoint only reads data; the frontend may send
 the suggested `editionId` to `POST /api/shelf`. Invalid IDs or query parameters
 return 400; missing works return 404.
 
-`GET /api/shelf` returns all shelf entries, newest first. Optional `status` can
-be `want_to_read`, `reading`, or `finished`; unknown query parameters and status
-values return 400. Each item has `{ book, shelfEntry, progressPercent }`.
+`GET /api/shelf` returns shelf entries newest first in pages of 10. Optional
+`status` can be `want_to_read`, `reading`, or `finished`; `page` defaults to 1
+(maximum 10,000) and `limit` defaults to 10 (maximum 50). Invalid query
+parameters return 400. Each item has `{ book, shelfEntry, progressPercent }`.
 The book includes a relative `coverUrl`. `progressPercent` is rounded to the
 nearest integer when `totalPages` is known, and `null` otherwise. An empty
-shelf or filter returns `{ "status": 200, "data": [], "meta": { "count": 0 } }`.
-`meta.count` is the number of entries matching the current filter. The shelf
-list is not paginated, so it also equals the number of returned entries.
+shelf or filter returns `data: []` and `meta: { page, limit, count: 0, total: 0,
+totalPages: 0 }`. `meta.count` is the number of items on this page; `meta.total`
+is the number matching the status filter. `GET /api/shelf/:bookId` returns one
+entry in the same item shape for the detail screen, or 404 if it is absent.
 
 `GET /api/shelf/stats` returns `{ "status": 200, "data": { "total": 0,
 "wantToRead": 0, "reading": 0, "finished": 0 } }` for an empty shelf and the corresponding
@@ -302,14 +323,15 @@ or `null` to clear). Other fields, empty bodies, and invalid work IDs return 400
 The response's `data` is the updated shelf entry. Updates use a row lock and
 transaction so page, status, and reading dates change together.
 
-When the page reaches a known total, status becomes `finished` and `finishedAt`
-is set. Setting status to `finished` without a page sets the page to the known
+When the page is above zero but below a known total, status becomes `reading`.
+When it reaches the total, status becomes `finished` and `finishedAt` is set.
+Setting status to `finished` without a page sets the page to the known
 total; sending a conflicting lower page returns 400. Lowering the page of a
 finished book without specifying a status changes it back to `reading` and
 clears `finishedAt`. The first transition to `reading` sets `startedAt`, which
-is preserved thereafter. Without a known total, a page may be recorded but
-does not automatically finish the book; the user can explicitly choose
-`finished`. Unknown page counts still yield `progressPercent: null` in lists.
+is preserved thereafter. Without a known total, `currentPage` cannot be
+updated, but status, rating, and notes can be changed. The user can explicitly
+choose `finished`; unknown page counts still yield `progressPercent: null`.
 
 `DELETE /api/shelf/:bookId` removes the shelf entry, then its book metadata in
 one transaction, and returns
