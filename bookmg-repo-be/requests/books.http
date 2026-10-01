@@ -26,6 +26,12 @@ GET {{baseUrl}}/api/books/search?q=J.%20K.%20Rowling&field=author&page=1&limit=2
 ### Cover — JPEG if available; 404 COVER_NOT_FOUND if missing
 GET {{baseUrl}}/api/books/covers/{{coverId}}
 
+### Discover books about a subject; same normalized response and pagination
+GET {{baseUrl}}/api/books/search?q=Magic&field=subject&page=1&limit=20
+
+### Multi-word subject, second page
+GET {{baseUrl}}/api/books/search?q=Juvenile%20fiction&field=subject&page=2&limit=20
+
 ### Missing keyword — expected 400 VALIDATION_ERROR
 GET {{baseUrl}}/api/books/search?page=1&limit=20
 

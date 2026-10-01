@@ -19,7 +19,7 @@ Open Library and persists the shelf in MySQL.
 | --- | --- | --- |
 | GET | `/api/health` | Check backend availability |
 | GET | `/api/dashboard` | Get counts, active reading, nearly finished, and recently finished books |
-| GET | `/api/books/search` | Search books by title or author |
+| GET | `/api/books/search` | Search books by title, author, or subject |
 | GET | `/api/books/:workId` | Get work details and suggested edition |
 | GET | `/api/books/covers/:coverId` | Proxy a cover image |
 | GET | `/api/shelf` | List and filter saved books |
@@ -345,9 +345,12 @@ or shelf entries. Native Node.js `fetch` calls fixed upstream hosts with a
 | GET | `/api/books/OL82563W` | Read normalized work details and a suggested edition with a page count |
 
 Search parameters: required nonblank `q` (up to 200 characters), optional `field`
-(`all`, `title`, or `author`; default `all`), `page` (1–10,000; default 1), and
+(`all`, `title`, `author`, or `subject`; default `all`), `page` (1–10,000; default 1), and
 `limit` (1–50; default 20). Unknown parameters are rejected. `field=all` uses
 Open Library's general search; title/author modes use their respective fields.
+Subject mode uses a safely escaped quoted subject phrase. Click a subject in book
+detail to open discovery with that subject selected; pagination retains the mode.
+See [subject search plan and specification](docs/features/subject-search.md).
 
 ```json
 {

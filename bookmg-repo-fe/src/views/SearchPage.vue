@@ -19,7 +19,7 @@ const searching = shallowRef(false)
 const addingId = shallowRef(null)
 const error = shallowRef('')
 const query = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
-const field = computed(() => ['all', 'title', 'author'].includes(route.query.field) ? route.query.field : 'all')
+const field = computed(() => ['all', 'title', 'author', 'subject'].includes(route.query.field) ? route.query.field : 'all')
 const page = computed(() => {
   const value = Number(route.query.page ?? 1)
   return Number.isInteger(value) && value >= 1 && value <= 10000 ? value : 1
@@ -88,7 +88,7 @@ async function addBook(workId) {
       <div class="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:px-8 sm:py-14 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-center">
         <div class="relative z-10 max-w-2xl">
           <h1 class="font-display text-4xl leading-[1.08] tracking-tight sm:text-6xl">Tìm câu chuyện tiếp theo của bạn.</h1>
-          <p class="mt-4 max-w-lg text-base leading-7 text-[#c3d7cf]">Tìm sách theo tên hoặc tác giả, rồi lưu những cuốn bạn muốn đọc vào tủ sách của mình.</p>
+          <p class="mt-4 max-w-lg text-base leading-7 text-[#c3d7cf]">Tìm sách theo tên, tác giả hoặc chủ đề, rồi lưu những cuốn bạn muốn đọc vào tủ sách của mình.</p>
           <div class="mt-8"><SearchForm :initial-query="query" :initial-field="field" :busy="searching" @search="search" /></div>
         </div>
         <div aria-hidden="true" class="relative hidden h-64 items-end justify-center gap-2 border-b-8 border-[#9db3a4] lg:flex">
@@ -110,7 +110,7 @@ async function addBook(workId) {
       <div v-else-if="error" role="alert" class="mt-7 rounded-lg border border-line bg-danger-surface p-6 text-danger">
         <p>{{ error }}</p><button v-if="query" type="button" class="mt-3 font-semibold underline" @click="loadSearch">Thử lại</button>
       </div>
-      <div v-else-if="!query" class="py-16 text-center text-muted">Nhập tên sách hoặc tác giả để bắt đầu khám phá.</div>
+      <div v-else-if="!query" class="py-16 text-center text-muted">Nhập tên sách, tác giả hoặc chủ đề để bắt đầu khám phá.</div>
       <div v-else-if="books.length === 0" class="py-16 text-center text-muted">Không tìm thấy sách phù hợp. Thử một từ khóa khác.</div>
       <div v-else class="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 xl:grid-cols-5">
         <BookCard v-for="book in books" :key="book.id" :book="book" :busy="addingId === book.id" @add="addBook" />

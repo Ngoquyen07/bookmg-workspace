@@ -9,6 +9,7 @@ const options = [
   { value: 'all', label: 'Tất cả' },
   { value: 'title', label: 'Tên sách' },
   { value: 'author', label: 'Tác giả' },
+  { value: 'subject', label: 'Chủ đề' },
 ]
 const query = shallowRef(props.initialQuery)
 const field = shallowRef(props.initialField)
@@ -37,8 +38,8 @@ function submit() {
         <div class="min-w-0">
           <div class="flex min-h-12 items-center gap-3 px-3">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 shrink-0 text-muted"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
-            <label for="book-query" class="sr-only">Tên sách hoặc tác giả</label>
-            <input id="book-query" v-model="query" type="search" maxlength="200" placeholder="Tìm tên sách hoặc tác giả..." class="w-full min-w-0 bg-transparent text-ink placeholder:text-muted/80" :aria-invalid="Boolean(error)" :aria-describedby="error ? 'search-error' : undefined" @input="error = ''" />
+            <label for="book-query" class="sr-only">Tên sách, tác giả hoặc chủ đề</label>
+            <input id="book-query" v-model="query" type="search" maxlength="200" placeholder="Tìm tên sách, tác giả hoặc chủ đề..." class="w-full min-w-0 bg-transparent text-ink placeholder:text-muted/80" :aria-invalid="Boolean(error)" :aria-describedby="error ? 'search-error' : undefined" @input="error = ''" />
           </div>
           <p v-if="error" id="search-error" role="alert" class="px-3 pb-1 pt-1 text-sm font-medium text-danger">{{ error }}</p>
         </div>

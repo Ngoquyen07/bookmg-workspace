@@ -1,6 +1,6 @@
 <script setup>
 import { computed, shallowRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { booksApi } from '../modules/books/api/booksApi.js'
 import { shelfApi } from '../modules/shelf/api/shelfApi.js'
@@ -127,7 +127,12 @@ async function remove() {
       <div class="py-1 lg:py-8">
         <p class="text-sm font-semibold text-moss">Chi tiết sách</p>
         <h1 class="mt-3 max-w-2xl font-display text-4xl font-bold leading-tight sm:text-5xl">{{ book.title }}</h1>
-        <p class="mt-4 text-lg text-muted">{{ book.authors?.length ? book.authors.join(', ') : 'Chưa rõ tác giả' }}</p>
+        <p class="mt-4 text-lg text-muted">
+          <template v-if="book.authors?.length">
+            <template v-for="(author, index) in book.authors" :key="index"><span v-if="index">, </span><RouterLink :to="{ name: 'search', query: { q: author, field: 'author', page: 1 } }" class="underline decoration-line underline-offset-4 hover:text-moss focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss">{{ author }}</RouterLink></template>
+          </template>
+          <template v-else>Chưa rõ tác giả</template>
+        </p>
         <div class="mt-7 flex flex-wrap gap-x-8 gap-y-3 border-y border-line py-5 text-sm text-muted">
           <p><span class="block text-xs">Xuất bản lần đầu</span><span class="mt-1 block font-semibold text-ink">{{ book.firstPublishYear ?? 'Chưa rõ' }}</span></p>
           <p><span class="block text-xs">Số trang</span><span class="mt-1 block font-semibold text-ink">{{ book.totalPages ? `${book.totalPages} trang` : 'Chưa rõ' }}</span></p>
@@ -147,7 +152,7 @@ async function remove() {
         </section>
         <section class="mt-8" v-if="book.subjects?.length">
           <h2 class="font-display text-2xl font-bold">Chủ đề</h2>
-          <div class="mt-4 flex flex-wrap gap-2"><span v-for="subject in visibleSubjects" :key="subject" class="rounded-full border border-line bg-surface px-3 py-1.5 text-sm">{{ subject }}</span></div>
+          <div class="mt-4 flex flex-wrap gap-2"><RouterLink v-for="subject in visibleSubjects" :key="subject" :to="{ name: 'search', query: { q: subject, field: 'subject', page: 1 } }" class="rounded-full border border-line bg-surface px-3 py-1.5 text-sm hover:border-moss hover:text-moss focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss">{{ subject }}</RouterLink></div>
           <button v-if="book.subjects.length > 12" type="button" class="mt-4 text-sm font-semibold text-moss hover:underline" @click="showAllSubjects = !showAllSubjects">{{ showAllSubjects ? 'Thu gọn' : `Xem thêm ${book.subjects.length - 12} chủ đề` }}</button>
         </section>
       </div>

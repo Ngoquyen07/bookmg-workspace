@@ -32,7 +32,8 @@ function positiveInteger(value, maximum) {
 export async function searchBooks({ q, field, page, limit }) {
   const url = new URL(OPEN_LIBRARY_URLS.SEARCH)
   url.search = new URLSearchParams({
-    [field === 'all' ? 'q' : field]: q,
+    [field === 'all' || field === 'subject' ? 'q' : field]: field === 'subject'
+      ? `subject:"${q.replace(/[\\"]/g, '\\$&')}"` : q,
     page: String(page), limit: String(limit),
     fields: 'key,title,author_name,cover_i,first_publish_year',
   }).toString()
