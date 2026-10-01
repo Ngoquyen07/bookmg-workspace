@@ -52,16 +52,28 @@ export async function findShelfEntryByBookId(bookId) {
   }
 }
 
-export async function listShelfEntries(status) {
+export async function listShelfEntries({ status, page, limit }) {
   try {
     const { Book, ShelfEntry } = await import('../models/index.js')
-    return await ShelfEntry.findAll({
+    return await ShelfEntry.findAndCountAll({
       where: status ? { status } : {},
       include: { model: Book, as: 'book' },
       order: [['createdAt', 'DESC'], ['id', 'DESC']],
+      limit, offset: (page - 1) * limit,
+      distinct: true,
     })
   } catch (error) {
     logger.logError(error, 'shelfRepository.listShelfEntries')
+    throw error
+  }
+}
+
+export async function getShelfEntryByBookId(bookId) {
+  try {
+    const { Book, ShelfEntry } = await import('../models/index.js')
+    return await ShelfEntry.findOne({ where: { bookId }, include: { model: Book, as: 'book' } })
+  } catch (error) {
+    logger.logError(error, 'shelfRepository.getShelfEntryByBookId')
     throw error
   }
 }

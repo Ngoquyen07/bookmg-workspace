@@ -1,5 +1,5 @@
 import * as openLibrary from '../adapters/openLibraryAdapter.js'
-import { addBookToShelf, findShelfBookIds, listShelfEntries, countShelfEntriesByStatus, updateShelfEntry, deleteShelfBook } from '../repositories/shelfRepository.js'
+import { addBookToShelf, findShelfBookIds, listShelfEntries, getShelfEntryByBookId, countShelfEntriesByStatus, updateShelfEntry, deleteShelfBook } from '../repositories/shelfRepository.js'
 import { API_ERRORS } from '../constants/responseConstants.js'
 import { READING_STATUS } from '../constants/bookConstants.js'
 import ApiError from '../utils/apiError.js'
@@ -23,23 +23,34 @@ export async function addBook({ workId, status, editionId }) {
   }
 }
 
-export async function listBooks(status) {
+function formatShelfEntry(entry) {
+  const { book, ...shelfEntry } = entry.toJSON()
+  return {
+    book: { ...book, coverUrl: book.coverId === null ? null : `/api/books/covers/${book.coverId}` },
+    shelfEntry,
+    progressPercent: shelfEntry.totalPages === null
+      ? null : Math.round(shelfEntry.currentPage / shelfEntry.totalPages * 100),
+  }
+}
+
+export async function listBooks(query) {
   try {
-    const entries = await listShelfEntries(status)
-    return entries.map(entry => {
-      const { book, ...shelfEntry } = entry.toJSON()
-      return {
-        book: {
-          ...book,
-          coverUrl: book.coverId === null ? null : `/api/books/covers/${book.coverId}`,
-        },
-        shelfEntry,
-        progressPercent: shelfEntry.totalPages === null
-          ? null : Math.round(shelfEntry.currentPage / shelfEntry.totalPages * 100),
-      }
-    })
+    const { rows, count } = await listShelfEntries(query)
+    const data = rows.map(formatShelfEntry)
+    return { data, meta: { page: query.page, limit: query.limit, count: data.length, total: count, totalPages: Math.ceil(count / query.limit) } }
   } catch (error) {
     logger.logError(error, 'shelfService.listBooks')
+    throw error
+  }
+}
+
+export async function getShelfBook(bookId) {
+  try {
+    const entry = await getShelfEntryByBookId(bookId)
+    if (!entry) throw new ApiError(API_ERRORS.SHELF_ENTRY_NOT_FOUND)
+    return formatShelfEntry(entry)
+  } catch (error) {
+    logger.logError(error, 'shelfService.getShelfBook')
     throw error
   }
 }
@@ -64,6 +75,9 @@ export async function updateBook(bookId, changes) {
     const today = new Date().toISOString().slice(0, 10)
     return await updateShelfEntry(bookId, entry => {
       const total = entry.totalPages
+      if (total === null && changes.currentPage !== undefined) {
+        throw new ApiError(API_ERRORS.VALIDATION_ERROR)
+      }
       if (total !== null && changes.currentPage !== undefined && changes.currentPage > total) {
         throw new ApiError(API_ERRORS.VALIDATION_ERROR)
       }
@@ -79,6 +93,7 @@ export async function updateBook(bookId, changes) {
 
       let status = changes.status ?? entry.status
       if (total !== null && entry.currentPage === total) status = READING_STATUS.FINISHED
+      else if (total !== null && entry.currentPage > 0) status = READING_STATUS.READING
       else if (changes.currentPage !== undefined && entry.status === READING_STATUS.FINISHED &&
           changes.status === undefined) status = READING_STATUS.READING
 

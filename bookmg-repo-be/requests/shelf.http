@@ -22,11 +22,14 @@ Content-Type: application/json
   "status": "reading"
 }
 
-### All shelf entries, newest first
-GET {{baseUrl}}/api/shelf
+### First page of shelf entries, newest first (10 per page by default)
+GET {{baseUrl}}/api/shelf?page=1&limit=10
 
-### Filter by reading status
-GET {{baseUrl}}/api/shelf?status=reading
+### Second page of the reading tab (change page and status independently)
+GET {{baseUrl}}/api/shelf?status=reading&page=2&limit=10
+
+### One shelf entry for the book detail screen
+GET {{baseUrl}}/api/shelf/{{workId}}
 
 ### Counts for the shelf dashboard
 GET {{baseUrl}}/api/shelf/stats

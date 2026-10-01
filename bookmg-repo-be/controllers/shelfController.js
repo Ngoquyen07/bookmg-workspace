@@ -1,4 +1,4 @@
-import { addBook, listBooks, getStats, updateBook, removeBook } from '../services/shelfService.js'
+import { addBook, listBooks, getShelfBook, getStats, updateBook, removeBook } from '../services/shelfService.js'
 import { validateAddBook, validateShelfFilter, validateShelfBookId, validateShelfUpdate } from '../validation/shelfValidation.js'
 import { API_ERRORS, HTTP_STATUS } from '../constants/responseConstants.js'
 import { sendSuccess, sendError } from '../utils/apiResponse.js'
@@ -17,10 +17,19 @@ export async function addBookToShelf(req, res) {
 
 export async function listShelf(req, res) {
   try {
-    const data = await listBooks(validateShelfFilter(req.query))
-    return sendSuccess(res, data, { meta: { count: data.length } })
+    const { data, meta } = await listBooks(validateShelfFilter(req.query))
+    return sendSuccess(res, data, { meta })
   } catch (error) {
     logger.logError(error, 'shelfController.listShelf', req)
+    return sendError(res, error)
+  }
+}
+
+export async function getShelfBookDetail(req, res) {
+  try {
+    return sendSuccess(res, await getShelfBook(validateShelfBookId(req.params, req.query)))
+  } catch (error) {
+    logger.logError(error, 'shelfController.getShelfBookDetail', req)
     return sendError(res, error)
   }
 }

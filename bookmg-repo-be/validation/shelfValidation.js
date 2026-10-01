@@ -10,6 +10,8 @@ const addSchema = Joi.object({
 })
 const listSchema = Joi.object({
   status: Joi.string().valid(...Object.values(READING_STATUS)),
+  page: Joi.number().integer().min(1).max(10000).default(1),
+  limit: Joi.number().integer().min(1).max(50).default(10),
 })
 const bookIdSchema = Joi.string().pattern(/^OL\d+W$/).max(32).required()
 const updateSchema = Joi.object({
@@ -28,7 +30,7 @@ export function validateAddBook(body) {
 export function validateShelfFilter(query) {
   const { error, value } = listSchema.validate(query)
   if (error) throw new ApiError(API_ERRORS.VALIDATION_ERROR)
-  return value.status
+  return value
 }
 
 export function validateShelfBookId(params, query) {
