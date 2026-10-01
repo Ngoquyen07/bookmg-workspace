@@ -27,8 +27,17 @@ The VPS at `/home/ubuntu/apps/bookmg` is a checkout of GitHub `main` with a
 read-only deploy key. Its systemd timer checks `main` about once a minute. For
 a new commit, `deploy/bookmg-sync.sh` fast-forwards the checkout, rebuilds the
 containers, and verifies MySQL, the API, and the frontend through local HTTPS.
-If verification fails, it restores the previous code and containers. Check the
-deployed commit and timer logs with:
+If verification fails, it restores the previous code and containers. After the
+initial deployment, install and enable the timer on the VPS:
+
+```sh
+sudo install -m 644 deploy/systemd/bookmg-deploy.service /etc/systemd/system/
+sudo install -m 644 deploy/systemd/bookmg-deploy.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now bookmg-deploy.timer
+```
+
+Check the deployed commit and timer logs with:
 
 ```sh
 cd /home/ubuntu/apps/bookmg
