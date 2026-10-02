@@ -14,6 +14,7 @@ test('book metadata supports missing fields and rejects invalid data', async () 
   for (const data of [
     { id: '/works/OL82563W' }, { title: '   ' }, { authors: [42] },
     { subjects: 'Fantasy' },
+    { readingUrl: 'javascript:alert(1)' }, { readingUrl: 'https://evil.example/book' },
   ]) {
     await assert.rejects(Book.build({ id: 'OL82563W', title: 'Harry Potter', ...data }).validate())
   }

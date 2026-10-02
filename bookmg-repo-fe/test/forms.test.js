@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import EbookLink from '../src/modules/books/components/EbookLink.vue'
 import { expect, test, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
@@ -8,6 +9,21 @@ import { booksApi } from '../src/modules/books/api/booksApi.js'
 vi.mock('vue-toastification', () => ({ useToast: () => ({}) }))
 import AddBookForm from '../src/modules/books/components/AddBookForm.vue'
 import ShelfUpdateForm from '../src/modules/shelf/components/ShelfUpdateForm.vue'
+
+test('ebook link and label disappear together when no URL is available', async () => {
+  const wrapper = mount(EbookLink)
+  expect(wrapper.find('section').exists()).toBe(false)
+  await wrapper.setProps({ url: 'https://archive.org/stream/example' })
+  expect(wrapper.get('h2').text()).toBe('Ebook')
+  const link = wrapper.get('a')
+  expect(link.attributes('href')).toBe('https://archive.org/stream/example')
+  expect(link.attributes('target')).toBe('_blank')
+  expect(link.attributes('rel')).toBe('noopener noreferrer')
+  await wrapper.setProps({ url: null })
+  expect(wrapper.find('section').exists()).toBe(false)
+  expect(wrapper.text()).not.toContain('Ebook')
+  wrapper.unmount()
+})
 
 test.each([
   { field: 'subject', q: 'Juvenile fiction', label: 'Chủ đề', encoded: 'Juvenile+fiction' },

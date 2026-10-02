@@ -440,3 +440,9 @@ GitHub Actions hiện chạy build FE và kiểm tra proxy FE → BE trên Node 
 ## Trước khi nộp bài
 
 Cấp quyền repository, gửi link FE/BE, xác nhận commit trên VPS đúng bản nộp và migration đã chạy. Kiểm tra HTTPS, có dữ liệu mẫu xem ngay và thử luồng tìm → chi tiết → thêm → sửa → xóa có xác nhận trên bản phát hành. Kiểm tra thêm trùng trả 409 và dữ liệu sai bị từ chối. Trình bày các điểm khác đề/tính năng bổ sung ở trên; giữ dịch vụ hoạt động và theo dõi ít nhất 7 ngày sau khi nộp.
+
+### Link ebook trong chi tiết sách
+
+Chi tiết chỉ hiện mục ebook khi có link đọc hoặc mượn khớp đúng phiên bản; không có thì ẩn cả nhãn. BE tra Open Library Read API và kiểm tra URL. Khi thêm sách, link được lưu vào `books.readingUrl` trong transaction; xem detail không ghi database. Nếu không gửi `editionId`, BE chọn phiên bản gợi ý và lưu số trang nếu có. Link mở tab ngoài, tiến độ vẫn nhập thủ công; khả năng truy cập có thể thay đổi.
+
+Chạy `npm run db:migrate` trong BE trước khi dùng phiên bản này. Thiết kế: [ebook-reading-link.md](docs/features/ebook-reading-link.md); request mẫu: [ebook-link.http](bookmg-repo-be/requests/ebook-link.http).

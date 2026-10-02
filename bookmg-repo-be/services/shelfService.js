@@ -9,7 +9,8 @@ export async function addBook({ workId, editionId }) {
   try {
     if ((await findShelfBookIds([workId])).has(workId)) throw new ApiError(API_ERRORS.BOOK_ALREADY_IN_SHELF)
     const book = await openLibrary.getWork(workId)
-    const edition = editionId ? await openLibrary.getEdition(editionId, workId) : { editionId: null, totalPages: null }
+    const edition = editionId ? await openLibrary.getEdition(editionId, workId) : await openLibrary.getSuggestedEdition(workId)
+    book.readingUrl = await openLibrary.getReadingUrl(edition.editionId, workId)
     return await addBookToShelf(book, { ...edition, startedAt: null, finishedAt: null })
   } catch (error) {
     logger.logError(error, 'shelfService.addBook')

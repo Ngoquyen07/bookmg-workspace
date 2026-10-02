@@ -23,9 +23,10 @@ export async function addBookToShelf(bookData, shelfData) {
     const { sequelize } = await import('../config/database.js')
     const { Book, ShelfEntry } = await import('../models/index.js')
     return await sequelize.transaction(async transaction => {
-      const [book] = await Book.findOrCreate({
+      const [book, created] = await Book.findOrCreate({
         where: { id: bookData.id }, defaults: bookData, transaction,
       })
+      if (!created) await book.update({ readingUrl: bookData.readingUrl ?? null }, { transaction })
       const entry = await ShelfEntry.create({ bookId: book.id, ...shelfData }, { transaction })
       return { book: book.toJSON(), shelfEntry: entry.toJSON() }
     })
@@ -42,10 +43,12 @@ export async function addBookToShelf(bookData, shelfData) {
 
 export async function findShelfEntryByBookId(bookId) {
   try {
-    const { ShelfEntry } = await import('../models/index.js')
-    return await ShelfEntry.findOne({
-      attributes: ['editionId', 'totalPages'], where: { bookId }, raw: true,
+    const { Book, ShelfEntry } = await import('../models/index.js')
+    const entry = await ShelfEntry.findOne({
+      attributes: ['editionId', 'totalPages'], where: { bookId },
+      include: { model: Book, as: 'book', attributes: ['readingUrl'] },
     })
+    return entry ? { editionId: entry.editionId, totalPages: entry.totalPages, readingUrl: entry.book.readingUrl } : null
   } catch (error) {
     logger.logError(error, 'shelfRepository.findShelfEntryByBookId')
     throw error
