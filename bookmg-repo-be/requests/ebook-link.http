@@ -1,0 +1,37 @@
+# Run db:migrate and start local BE first. No ebook is guaranteed to remain available.
+@baseUrl = http://127.0.0.1:3000
+@workId = OL15328717W
+@editionId = OL23747519M
+
+### Inspect selected edition and its parent work before adding
+GET https://openlibrary.org/books/{{editionId}}.json
+
+### Inspect reading availability; exact match required by our backend
+GET https://openlibrary.org/api/volumes/brief/olid/{{editionId}}.json
+
+### Read-only detail: readingUrl is a trusted link or null
+GET {{baseUrl}}/api/books/{{workId}}
+
+### Add selected edition; persists readingUrl in books (201 or 409 if already added)
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}",
+  "editionId": "{{editionId}}"
+}
+
+### Verify persisted metadata: data.book.readingUrl
+GET {{baseUrl}}/api/shelf/{{workId}}
+
+### Reload detail; ebook section is hidden if readingUrl is null
+GET {{baseUrl}}/api/books/{{workId}}
+
+### Client-provided URLs are rejected (400)
+POST {{baseUrl}}/api/shelf
+Content-Type: application/json
+
+{
+  "workId": "{{workId}}",
+  "readingUrl": "https://example.com/"
+}

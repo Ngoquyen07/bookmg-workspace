@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize'
 import { sequelize } from '../config/database.js'
+import { normalizeReadingUrl } from '../utils/readingUrl.js'
 
 function stringArray(value) {
   if (!Array.isArray(value) || !value.every(item => typeof item === 'string')) {
@@ -31,6 +32,12 @@ const Book = sequelize.define('Book', {
     validate: { isInt: true, min: 1, max: 65535 },
   },
   description: { type: DataTypes.TEXT, allowNull: true },
+  readingUrl: {
+    type: DataTypes.STRING(2048), allowNull: true, defaultValue: null,
+    validate: { safeUrl(value) {
+      if (value !== null && normalizeReadingUrl(value) !== value) throw new Error('Expected a trusted HTTPS reading URL')
+    } },
+  },
   subjects: {
     type: DataTypes.JSON, allowNull: false, defaultValue: [],
     validate: { stringArray },

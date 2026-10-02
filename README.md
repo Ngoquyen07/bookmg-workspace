@@ -86,6 +86,7 @@ erDiagram
         int coverId
         int firstPublishYear
         text description
+        string readingUrl "nullable ebook link"
         json subjects
     }
     SHELF_ENTRIES {
@@ -103,7 +104,9 @@ erDiagram
     }
 ```
 
-Hai bảng đều có `createdAt/updatedAt`. `books` lưu metadata tác phẩm; `shelf_entries` lưu trạng thái và phiên bản đọc. `bookId` là khóa ngoại duy nhất, một sách tối đa một bản ghi tủ. Tác giả/chủ đề là JSON; số trang thuộc phiên bản `OL...M`, chưa rõ thì `null`. Migration được theo dõi trong `SequelizeMeta`.
+Hai bảng đều có `createdAt/updatedAt`. `books` lưu metadata tác phẩm và `readingUrl` tùy chọn; `shelf_entries` lưu trạng thái và phiên bản đọc. `bookId` là khóa ngoại duy nhất, một sách tối đa một bản ghi tủ. Tác giả/chủ đề là JSON; số trang thuộc phiên bản `OL...M`, chưa rõ thì `null`. Migration được theo dõi trong `SequelizeMeta`.
+
+Chi tiết hiện mục ebook khi có link đọc/mượn khớp đúng phiên bản; không có thì ẩn cả nhãn. BE tra Read API, kiểm tra URL và lưu link ở `books` khi thêm vào tủ; mở detail không ghi DB. Nếu không gửi `editionId` lúc thêm, BE chọn phiên bản gợi ý. Link mở tab ngoài, có thể yêu cầu mượn và thay đổi khả năng truy cập; tiến độ vẫn nhập thủ công. Ví dụ: [ebook-link.http](bookmg-repo-be/requests/ebook-link.http).
 
 Tìm kiếm/xem chi tiết không ghi database. Thêm và xóa hai bảng dùng transaction; cập nhật dùng transaction và khóa bản ghi. Thêm trùng trả 409. Trang đọc là số nguyên 0–tổng trang; bằng tổng tự Đã đọc, lớn hơn 0 và chưa hết tự Đang đọc. Lần đầu Đang đọc ghi ngày bắt đầu, chuyển Đã đọc ghi ngày hoàn thành. Đánh giá nguyên 1–5 hoặc trống; ghi chú tối đa 1.000 ký tự. Không rõ tổng trang thì không nhập tiến độ số, vẫn đổi trạng thái/đánh giá/ghi chú được. Phần trăm lấy phần nguyên xuống; `lastProgressAt` chỉ đổi khi trang thay đổi.
 
@@ -128,6 +131,8 @@ JSON thành công: `{status, data, meta?}`; lỗi: `{status, error:{code,message
 Mã HTTP: 200 đọc/sửa/xóa, 201 thêm, 400 đầu vào sai, 404 không thấy, 409 trùng, 500 lỗi nội bộ, 502/504 lỗi/timeout nguồn. BE có `try/catch`, phản hồi thống nhất và log file `logs/YYYY-MM-DD.log` bị Git bỏ qua. Timeout nguồn 10 giây. Ví dụ chạy bằng VS Code REST Client: [books.http](bookmg-repo-be/requests/books.http), [shelf.http](bookmg-repo-be/requests/shelf.http), [luồng đầy đủ](bookmg-repo-be/requests/reading-flow.http), [dashboard.http](bookmg-repo-be/requests/dashboard.http). Đọc từng request trước khi chạy thao tác ghi/xóa.
 
 ## Triển khai
+
+Hướng dẫn chi tiết: [deployment-guide.md](docs/deployment-guide.md).
 
 Ứng dụng dùng một Ubuntu VPS. `compose.yaml` chạy MySQL, migration, BE và Caddy; chỉ công khai 80/443. Caddy cấp HTTPS, phục vụ FE và proxy `/api` tới BE; MySQL không mở cổng public. Cần Docker/Compose, tên miền trỏ DNS tới VPS và quyền đọc repository.
 

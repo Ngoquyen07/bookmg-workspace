@@ -9,6 +9,12 @@ export const API_ERROR_MESSAGES = {
 
 export const DEFAULT_API_ERROR_MESSAGE = 'Không thể kết nối tới máy chủ. Vui lòng thử lại.'
 
+export const EBOOK_MESSAGES = {
+  label: 'Ebook',
+  open: 'Xem bản ebook ↗',
+  hint: 'Mở trang đọc hoặc mượn bên ngoài; tiến độ đọc vẫn được cập nhật thủ công.',
+}
+
 export const DASHBOARD_MESSAGES = {
   title: 'Hành trình của bạn',
   description: 'Tiếp nối những trang đang đọc và nhìn lại những cuốn đã hoàn thành.',

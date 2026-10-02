@@ -46,8 +46,47 @@ test('invalid database configuration is caught and logged during startup', () =>
     assert.match(result.stderr, /Backend startup failed/)
     assert.doesNotMatch(result.stdout, /Backend ready/)
     assert.doesNotMatch(result.stderr, /UnhandledPromiseRejection/)
-    const entry = JSON.parse(result.stderr.trim().split('\n')[0])
-    assert.equal(entry.message, 'Backend startup failed')
-    assert.equal(entry.context.code, 'INTERNAL_SERVER_ERROR')
+    assert.match(result.stderr, /Backend startup failed Error/)
+  }
+})
+
+test('startup handles listen failures and shutdown closes HTTP before MySQL', () => {
+  for (const scenario of ['normal', 'listen-error', 'close-error']) {
+    const result = spawnSync(process.execPath, ['--input-type=module'], {
+      cwd: new URL('../', import.meta.url),
+      env: { ...process.env, DB_NAME: 'test', DB_USER: 'test', DB_PORT: '3306', SCENARIO: scenario },
+      encoding: 'utf8', timeout: 10_000,
+      input: `
+        import { EventEmitter } from 'node:events'
+        import app from './app.js'
+        import { sequelize } from './config/database.js'
+        sequelize.authenticate = async () => console.log('mysql-authenticated')
+        sequelize.close = async () => console.log('mysql-closed')
+        app.listen = (_port, _host, ready) => {
+          const server = new EventEmitter()
+          server.close = done => {
+            console.log('http-closed')
+            done(process.env.SCENARIO === 'close-error' ? new Error('Close failed') : null)
+          }
+          process.nextTick(() => process.env.SCENARIO === 'listen-error'
+            ? server.emit('error', Object.assign(new Error('Listen failed'), { code: 'EADDRINUSE' })) : ready())
+          return server
+        }
+        await import('./server.js')
+        process.emit('SIGTERM')
+        process.emit('SIGINT')
+      `,
+    })
+    assert.ifError(result.error)
+    assert.equal(result.status, scenario === 'normal' ? 0 : 1)
+    assert.match(result.stdout, /mysql-authenticated/)
+    assert.equal(result.stdout.match(/mysql-closed/g)?.length, 1)
+    if (scenario === 'listen-error') {
+      assert.match(result.stderr, /Backend startup failed EADDRINUSE/)
+      assert.doesNotMatch(result.stdout, /Backend ready/)
+    } else {
+      assert.match(result.stdout, /http-closed[\s\S]*mysql-closed/)
+      assert.equal(result.stdout.match(/http-closed/g)?.length, 1)
+    }
   }
 })

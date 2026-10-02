@@ -48,3 +48,9 @@ User-Agent: MiniReadingTracker/1.0
 
 ### Normalized book details through the backend; expected 200
 GET {{baseUrl}}/api/books/{{workId}}
+
+### Inspect raw Read API (diagnostic only; availability is not guaranteed)
+GET https://openlibrary.org/api/volumes/brief/olid/OL23747519M.json
+
+### Detail includes readingUrl (HTTPS link or null); does not write to the database
+GET {{baseUrl}}/api/books/OL15328717W
