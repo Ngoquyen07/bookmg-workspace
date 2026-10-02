@@ -124,7 +124,7 @@ sections and keeps navigation compact; titles wrap without pushing actions out.
 ```text
 [ Book icon   Tổng quan   Khám phá   Tủ sách   Theme ]
 
-[ Chặng đọc của bạn          Tìm sách ]
+[ Hành trình của bạn          Tìm sách ]
 [ Total | Want to read | Reading | Finished    ]
 
 [ Tiếp tục đọc                         Total ]
