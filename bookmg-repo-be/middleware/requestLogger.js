@@ -6,7 +6,7 @@ export default function requestLogger(req, res, next) {
   const started = performance.now()
   const path = req.path
   res.once('finish', () => {
-    if (path === '/api/health' && res.statusCode >= 200 && res.statusCode < 300) return
+    if (path === '/api/health' && ((res.statusCode >= 200 && res.statusCode < 300) || res.statusCode === 304)) return
     const level = res.statusCode >= HTTP_STATUS.INTERNAL_SERVER_ERROR ? LOG_LEVEL.ERROR
       : res.statusCode >= HTTP_STATUS.BAD_REQUEST ? LOG_LEVEL.WARN : LOG_LEVEL.INFO
     logger[level](LOG_MESSAGE.HTTP_COMPLETED, {
