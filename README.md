@@ -377,6 +377,8 @@ File tủ sách/luồng mẫu có thao tác ghi; chạy từng request sau khi �
 
 ## Triển khai trên VPS
 
+Hướng dẫn chi tiết GitHub → VPS, Docker/Caddy, migration, log và rollback: [deployment-guide.md](docs/deployment-guide.md).
+
 Cấu hình trong `compose.yaml` chạy MySQL, tác vụ migration, Express và Caddy trên Ubuntu VPS. Caddy phục vụ bản Vue đã build, chuyển `/api/*` tới BE và trả `index.html` cho các route FE. Chỉ cổng web 80/443 được công khai; cổng MySQL/BE không được xuất ra ngoài. HTTPS được cấp cho tên miền trong `BOOKMG_DOMAIN`.
 
 Cần Docker Engine/Compose, tên miền trỏ DNS tới VPS, quyền truy cập GitHub của máy chủ và cổng 80/443 được mở. Với máy mới:

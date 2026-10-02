@@ -5,6 +5,25 @@ import test from 'node:test'
 import logger from '../services/core/loggerService.js'
 import ApiError from '../utils/apiError.js'
 import { API_ERRORS } from '../constants/responseConstants.js'
+import { EventEmitter } from 'node:events'
+import requestLogger from '../middleware/requestLogger.js'
+
+test('successful health checks skip logging while failures and business requests remain logged', t => {
+  const info = t.mock.method(logger, 'info', () => {})
+  const error = t.mock.method(logger, 'error', () => {})
+  const warn = t.mock.method(logger, 'warn', () => {})
+  for (const [path, statusCode] of [['/api/health', 200], ['/api/health', 500], ['/api/health', 400], ['/api/shelf', 200]]) {
+    const res = Object.assign(new EventEmitter(), { statusCode })
+    let forwarded = false
+    requestLogger({ method: 'GET', path }, res, () => { forwarded = true })
+    assert.equal(forwarded, true)
+    res.emit('finish')
+  }
+  assert.equal(info.mock.callCount(), 1)
+  assert.equal(info.mock.calls[0].arguments[1].path, '/api/shelf')
+  assert.equal(error.mock.callCount(), 1)
+  assert.equal(warn.mock.callCount(), 1)
+})
 
 test('logger persists structured entries and redacts sensitive context', async () => {
   const message = `Logger check ${randomUUID()}`
