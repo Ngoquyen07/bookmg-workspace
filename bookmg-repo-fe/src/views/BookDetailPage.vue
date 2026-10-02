@@ -6,6 +6,7 @@ import { booksApi } from '../modules/books/api/booksApi.js'
 import { shelfApi } from '../modules/shelf/api/shelfApi.js'
 import BookCover from '../components/BookCover.vue'
 import AddBookForm from '../modules/books/components/AddBookForm.vue'
+import EbookLink from '../modules/books/components/EbookLink.vue'
 import ShelfUpdateForm from '../modules/shelf/components/ShelfUpdateForm.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
@@ -74,8 +75,8 @@ async function add() {
   adding.value = true
   error.value = ''
   try {
-    await shelfApi.add({ workId: book.value.id, ...(book.value.editionId ? { editionId: book.value.editionId } : {}) })
-    book.value = { ...book.value, isInShelf: true }
+    const result = await shelfApi.add({ workId: book.value.id, ...(book.value.editionId ? { editionId: book.value.editionId } : {}) })
+    book.value = { ...book.value, readingUrl: result.data.book.readingUrl, isInShelf: true }
     toast.success('Đã thêm sách vào tủ.')
     await loadShelfEntry(book.value.id)
   } catch (cause) {
@@ -137,6 +138,7 @@ async function remove() {
           <p><span class="block text-xs">Xuất bản lần đầu</span><span class="mt-1 block font-semibold text-ink">{{ book.firstPublishYear ?? 'Chưa rõ' }}</span></p>
           <p><span class="block text-xs">Số trang</span><span class="mt-1 block font-semibold text-ink">{{ book.totalPages ? `${book.totalPages} trang` : 'Chưa rõ' }}</span></p>
         </div>
+        <EbookLink :url="book.readingUrl" />
         <div class="mt-6 border-b border-line pb-7">
           <div v-if="book.isInShelf" class="flex flex-wrap items-center justify-between gap-3">
             <p class="font-semibold text-moss">✓ Đã có trong tủ sách</p>

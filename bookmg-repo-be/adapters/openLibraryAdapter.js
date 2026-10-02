@@ -2,6 +2,7 @@ import { API_ERRORS } from '../constants/responseConstants.js'
 import { OPEN_LIBRARY_URLS } from '../constants/openLibraryConstants.js'
 import ApiError from '../utils/apiError.js'
 import logger from '../services/core/loggerService.js'
+import { normalizeReadingUrl } from '../utils/readingUrl.js'
 
 const TIMEOUT_MS = 10_000
 
@@ -115,12 +116,31 @@ export async function getSuggestedEdition(workId) {
   return request(`${OPEN_LIBRARY_URLS.WORKS}${workId}/editions.json?limit=50`, async response => {
     const result = await response.json()
     if (!Array.isArray(result?.entries)) throw new ApiError(API_ERRORS.OPEN_LIBRARY_ERROR)
-    const edition = result.entries.find(item =>
-      /^\/books\/OL\d+M$/.test(item?.key) && positiveInteger(item.number_of_pages, 4294967295),
-    )
+    const validEditions = result.entries.filter(item => /^\/books\/OL\d+M$/.test(item?.key))
+    const edition = validEditions.find(item => positiveInteger(item.number_of_pages, 4294967295)) ?? validEditions[0]
     return edition ? {
       editionId: edition.key.slice('/books/'.length),
-      totalPages: edition.number_of_pages,
+      totalPages: positiveInteger(edition.number_of_pages, 4294967295),
     } : { editionId: null, totalPages: null }
   })
+}
+
+export async function getReadingUrl(editionId, workId) {
+  if (!editionId) return null
+  try {
+    return await request(`${OPEN_LIBRARY_URLS.READ}${editionId}.json`, async response => {
+      const result = await response.json()
+      if (!Array.isArray(result?.items)) throw new ApiError(API_ERRORS.OPEN_LIBRARY_ERROR)
+      for (const item of result.items) {
+        if (item?.match !== 'exact' || item['ol-edition-id'] !== editionId ||
+            item['ol-work-id'] !== workId || !['full access', 'lendable'].includes(item.status)) continue
+        const url = normalizeReadingUrl(item.itemURL)
+        if (url) return url
+      }
+      return null
+    })
+  } catch {
+    // request already logs failures; ebook availability is optional.
+    return null
+  }
 }

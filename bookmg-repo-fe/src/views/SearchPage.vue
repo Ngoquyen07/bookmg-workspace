@@ -87,7 +87,7 @@ async function addBook(workId) {
     <section class="bg-[#162c29] text-white">
       <div class="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:px-8 sm:py-14 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-center">
         <div class="relative z-10 max-w-2xl">
-          <h1 class="font-display text-4xl leading-[1.08] tracking-tight sm:text-6xl">Tìm câu chuyện tiếp theo của bạn.</h1>
+          <h1 class="font-display text-4xl leading-[1.08] tracking-tight sm:text-5xl">Tìm câu chuyện tiếp theo của bạn.</h1>
           <p class="mt-4 max-w-lg text-base leading-7 text-[#c3d7cf]">Tìm sách theo tên, tác giả hoặc chủ đề, rồi lưu những cuốn bạn muốn đọc vào tủ sách của mình.</p>
           <div class="mt-8"><SearchForm :initial-query="query" :initial-field="field" :busy="searching" @search="search" /></div>
         </div>

@@ -32,10 +32,12 @@ export async function getBookDetail(workId) {
       openLibrary.getWork(workId), findShelfEntryByBookId(workId),
     ])
     const edition = shelfEntry ?? await openLibrary.getSuggestedEdition(workId)
+    const readingUrl = edition.readingUrl ?? await openLibrary.getReadingUrl(edition.editionId, workId)
     return {
       ...book,
       coverUrl: book.coverId === null ? null : `/api/books/covers/${book.coverId}`,
       ...edition,
+      readingUrl,
       isInShelf: shelfEntry !== null,
     }
   } catch (error) {
