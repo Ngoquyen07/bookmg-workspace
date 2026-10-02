@@ -12,7 +12,7 @@ test('successful health checks skip logging while failures and business requests
   const info = t.mock.method(logger, 'info', () => {})
   const error = t.mock.method(logger, 'error', () => {})
   const warn = t.mock.method(logger, 'warn', () => {})
-  for (const [path, statusCode] of [['/api/health', 200], ['/api/health', 500], ['/api/health', 400], ['/api/shelf', 200]]) {
+  for (const [path, statusCode] of [['/api/health', 200], ['/api/health', 304], ['/api/health', 500], ['/api/health', 400], ['/api/shelf', 200]]) {
     const res = Object.assign(new EventEmitter(), { statusCode })
     let forwarded = false
     requestLogger({ method: 'GET', path }, res, () => { forwarded = true })
